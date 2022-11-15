@@ -111,8 +111,14 @@ def levelSelect_onScreenStart(app):
             Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
         ]
     for i in range(6):
-        app.levelSelect_buttons[i].AddListener(lambda : setActiveScreen('level'))
+        app.levelSelect_buttons[i].AddListener(setLevel(app,i))
     app.levelSelect_buttons[-1].AddListener(lambda : setActiveScreen('start'))
+
+def setLevel(app,i):
+    def f():
+        app.board = SudokuBoard(i)
+        setActiveScreen('level')
+    return f
 
 def levelSelect_redrawAll(app):
     for button in app.levelSelect_buttons:
@@ -149,12 +155,6 @@ def readFile(path):
         return f.read()
 
 def level_onScreenStart(app):
-    # startValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01.png.txt')
-    # startBoard = [[int(v) for v in line.split(' ')] for line in startValues.splitlines()]
-    # solValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01-solution.png-solution.txt')
-    # solBoard = [[int(v) for v in line.split(' ')] for line in solValues.splitlines()]
-    app.board = SudokuBoard([], [])
-
     app.boardLeft = 20
     app.boardTop = 20
     app.boardWidth = app.boardHeight = 360
@@ -168,13 +168,13 @@ def level_redrawAll(app):
 
 def level_onMousePress(app, mouseX, mouseY):
     if app.numPadSelection != None:
-        # app.board.setEntry(*app.selection, app.numPadSelection)
-        # app.selection = None
-        row, col = app.selection[0], app.selection[1]
-        if app.numPadSelection not in app.board.legals[row][col]:
-            app.board.addLegal(row, col, app.numPadSelection)
-        else:
-            app.board.removeLegal(row, col, app.numPadSelection)
+        app.board.setEntry(*app.selection, app.numPadSelection)
+        app.selection = None
+        # row, col = app.selection[0], app.selection[1]
+        # if app.numPadSelection not in app.board.legals[row][col]:
+        #     app.board.addLegal(row, col, app.numPadSelection)
+        # else:
+        #     app.board.removeLegal(row, col, app.numPadSelection)
 
 def level_onMouseMove(app, mouseX, mouseY):
     selectedCell = DrawBoard.getCell(app, mouseX, mouseY)
@@ -199,6 +199,9 @@ def level_onKeyPress(app, key):
             not app.board.isEntryFixed(*app.selection)):
             app.board.setEntry(*app.selection, int(key))
             app.selection = None
+    elif key == 'escape':
+        app.selection = None
+        setActiveScreen('start')
     #move to next non-fixed entry
     elif key == 'j': #up
         pass
