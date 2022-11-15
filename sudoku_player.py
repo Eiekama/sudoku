@@ -80,20 +80,20 @@ def setActiveScreen(screen):
 ##################################
 
 def start_onScreenStart(app):
-    app.buttons = [
+    app.start_buttons = [
             Button('Start',200,200,80,50,fill='lavender',align='center',labelSize=25),
             Button('Help',200,270,80,50,fill='lavender',align='center',labelSize=25),
         ]
-    app.buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
-    app.buttons[1].AddListener(lambda : setActiveScreen('help'))
+    app.start_buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
+    app.start_buttons[1].AddListener(lambda : setActiveScreen('help'))
 
 def start_redrawAll(app):
     drawLabel('Sudoku',200,100,size=30,align='center')
-    for button in app.buttons:
+    for button in app.start_buttons:
         button.drawButton()
 
 def start_onMousePress(app,mouseX,mouseY):
-    for button in app.buttons:
+    for button in app.start_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
 ##################################
@@ -101,7 +101,7 @@ def start_onMousePress(app,mouseX,mouseY):
 ##################################
 
 def levelSelect_onScreenStart(app):
-    app.buttons = [
+    app.levelSelect_buttons = [
             Button('Easy',200,50,90,35,fill='lavender',align='center',labelSize=24),
             Button('Medium',200,100,90,35,fill='lavender',align='center',labelSize=24),
             Button('Hard',200,150,90,35,fill='lavender',align='center',labelSize=24),
@@ -111,15 +111,15 @@ def levelSelect_onScreenStart(app):
             Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
         ]
     for i in range(6):
-        app.buttons[i].AddListener(lambda : setActiveScreen('level'))
-    app.buttons[-1].AddListener(lambda : setActiveScreen('start'))
+        app.levelSelect_buttons[i].AddListener(lambda : setActiveScreen('level'))
+    app.levelSelect_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
 def levelSelect_redrawAll(app):
-    for button in app.buttons:
+    for button in app.levelSelect_buttons:
         button.drawButton()
 
-def start_onMousePress(app,mouseX,mouseY):
-    for button in app.buttons:
+def levelSelect_onMousePress(app,mouseX,mouseY):
+    for button in app.levelSelect_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
 ##################################
@@ -127,18 +127,18 @@ def start_onMousePress(app,mouseX,mouseY):
 ##################################
 
 def help_onScreenStart(app):
-    app.buttons = [
+    app.help_buttons = [
             Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
         ]
-    app.buttons[-1].AddListener(lambda : setActiveScreen('start'))
+    app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
 def help_redrawAll(app):
     drawLabel('insert helpful text here',200,150,size=20,align='center')
-    for button in app.buttons:
+    for button in app.help_buttons:
         button.drawButton()
 
-def start_onMousePress(app,mouseX,mouseY):
-    for button in app.buttons:
+def help_onMousePress(app,mouseX,mouseY):
+    for button in app.help_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
 ##################################
@@ -149,11 +149,11 @@ def readFile(path):
         return f.read()
 
 def level_onScreenStart(app):
-    startValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01.png.txt')
-    startBoard = [[int(v) for v in line.split(' ')] for line in startValues.splitlines()]
-    solValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01-solution.png-solution.txt')
-    solBoard = [[int(v) for v in line.split(' ')] for line in solValues.splitlines()]
-    app.board = SudokuBoard(startBoard, solBoard)
+    # startValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01.png.txt')
+    # startBoard = [[int(v) for v in line.split(' ')] for line in startValues.splitlines()]
+    # solValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01-solution.png-solution.txt')
+    # solBoard = [[int(v) for v in line.split(' ')] for line in solValues.splitlines()]
+    app.board = SudokuBoard([], [])
 
     app.boardLeft = 20
     app.boardTop = 20
