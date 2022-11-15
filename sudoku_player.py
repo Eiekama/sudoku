@@ -1,12 +1,154 @@
 from cmu_cs3_graphics import *
 from SudokuBoard import SudokuBoard
+from UI import *
 import DrawBoard
 
+##################################################################
+# runAppWithScreens() and setActiveScreen(screen)
+##################################################################
+
+def runAppWithScreens(initialScreen, *args, **kwargs):
+    appFnNames = ['onAppStart',
+                  'onKeyPress', 'onKeyHold', 'onKeyRelease',
+                  'onMousePress', 'onMouseDrag', 'onMouseRelease',
+                  'onMouseMove', 'onStep', 'redrawAll']
+             
+    def checkForAppFns():
+        globalVars = globals()
+        for appFnName in appFnNames:
+            if appFnName in globalVars:
+                raise Exception(f'Do not define {appFnName} when using screens')
+   
+    def getScreenFnNames(appFnName):
+        globalVars = globals()
+        screenFnNames = [ ]
+        for globalVarName in globalVars:
+            screenAppSuffix = f'_{appFnName}'
+            if globalVarName.endswith(screenAppSuffix):
+                screenFnNames.append(globalVarName)
+        return screenFnNames
+   
+    def wrapScreenFns():
+        globalVars = globals()
+        for appFnName in appFnNames:
+            screenFnNames = getScreenFnNames(appFnName)
+            if (screenFnNames != [ ]) or (appFnName == 'onAppStart'):
+                globalVars[appFnName] = makeAppFnWrapper(appFnName)
+   
+    def makeAppFnWrapper(appFnName):
+        if appFnName == 'onAppStart':
+            def onAppStartWrapper(app):
+                globalVars = globals()
+                for screenFnName in getScreenFnNames('onScreenStart'):
+                    screenFn = globalVars[screenFnName]
+                    screenFn(app)
+            return onAppStartWrapper
+        else:
+            def appFnWrapper(*args):
+                globalVars = globals()
+                screen = globalVars['_activeScreen']
+                wrappedFnName = ('onScreenStart'
+                                 if appFnName == 'onAppStart' else appFnName)
+                screenFnName = f'{screen}_{wrappedFnName}'
+                if screenFnName in globalVars:
+                    screenFn = globalVars[screenFnName]
+                    return screenFn(*args)
+            return appFnWrapper
+
+    def go():
+        checkForAppFns()
+        wrapScreenFns()
+        setActiveScreen(initialScreen)
+        runApp(*args, **kwargs)
+   
+    go()
+
+def setActiveScreen(screen):
+    globalVars = globals()
+    if (screen in [None, '']) or (not isinstance(screen, str)):
+        raise Exception(f'{repr(screen)} is not a valid screen')
+    redrawAllFnName = f'{screen}_redrawAll'
+    if redrawAllFnName not in globalVars:
+        raise Exception(f'Screen {screen} requires {redrawAllFnName}()')
+    globalVars['_activeScreen'] = screen
+
+##################################################################
+# end of runAppWithScreens() and setActiveScreen(screen)
+##################################################################
+##################################
+# Start Screen
+##################################
+
+def start_onScreenStart(app):
+    app.buttons = [
+            Button('Start',200,200,80,50,fill='lavender',align='center',labelSize=25),
+            Button('Help',200,270,80,50,fill='lavender',align='center',labelSize=25),
+        ]
+    app.buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
+    app.buttons[1].AddListener(lambda : setActiveScreen('help'))
+
+def start_redrawAll(app):
+    drawLabel('Sudoku',200,100,size=30,align='center')
+    for button in app.buttons:
+        button.drawButton()
+
+def start_onMousePress(app,mouseX,mouseY):
+    for button in app.buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
+
+##################################
+# Level Select Screen
+##################################
+
+def levelSelect_onScreenStart(app):
+    app.buttons = [
+            Button('Easy',200,50,90,35,fill='lavender',align='center',labelSize=24),
+            Button('Medium',200,100,90,35,fill='lavender',align='center',labelSize=24),
+            Button('Hard',200,150,90,35,fill='lavender',align='center',labelSize=24),
+            Button('Expert',200,200,90,35,fill='lavender',align='center',labelSize=24),
+            Button('Evil',200,250,90,35,fill='lavender',align='center',labelSize=24),
+            Button('Manual',200,300,90,35,fill='lavender',align='center',labelSize=24),
+            Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
+        ]
+    for i in range(6):
+        app.buttons[i].AddListener(lambda : setActiveScreen('level'))
+    app.buttons[-1].AddListener(lambda : setActiveScreen('start'))
+
+def levelSelect_redrawAll(app):
+    for button in app.buttons:
+        button.drawButton()
+
+def start_onMousePress(app,mouseX,mouseY):
+    for button in app.buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
+
+##################################
+# Help Screen
+##################################
+
+def help_onScreenStart(app):
+    app.buttons = [
+            Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
+        ]
+    app.buttons[-1].AddListener(lambda : setActiveScreen('start'))
+
+def help_redrawAll(app):
+    drawLabel('insert helpful text here',200,150,size=20,align='center')
+    for button in app.buttons:
+        button.drawButton()
+
+def start_onMousePress(app,mouseX,mouseY):
+    for button in app.buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
+
+##################################
+# Level Screen
+##################################
 def readFile(path):
     with open(path, "rt") as f:
         return f.read()
 
-def onAppStart(app):
+def level_onScreenStart(app):
     startValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01.png.txt')
     startBoard = [[int(v) for v in line.split(' ')] for line in startValues.splitlines()]
     solValues = readFile('images-boards-and-solutions-for-1-thru-3/easy-01-solution.png-solution.txt')
@@ -21,10 +163,10 @@ def onAppStart(app):
     app.selection = None
     app.numPadSelection = None
 
-def redrawAll(app):
+def level_redrawAll(app):
     DrawBoard.drawBoard(app)
 
-def onMousePress(app, mouseX, mouseY):
+def level_onMousePress(app, mouseX, mouseY):
     if app.numPadSelection != None:
         # app.board.setEntry(*app.selection, app.numPadSelection)
         # app.selection = None
@@ -34,7 +176,7 @@ def onMousePress(app, mouseX, mouseY):
         else:
             app.board.removeLegal(row, col, app.numPadSelection)
 
-def onMouseMove(app, mouseX, mouseY):
+def level_onMouseMove(app, mouseX, mouseY):
     selectedCell = DrawBoard.getCell(app, mouseX, mouseY)
     if selectedCell != None:
         if app.board.isEntryFixed(*selectedCell):
@@ -51,7 +193,7 @@ def onMouseMove(app, mouseX, mouseY):
     else:
         app.numPadSelection = None
 
-def onKeyPress(app, key):
+def level_onKeyPress(app, key):
     if key in {'0','1','2','3','4','5','6','7','8','9'}:
         if (app.selection != None and
             not app.board.isEntryFixed(*app.selection)):
@@ -86,6 +228,6 @@ def onKeyPress(app, key):
         pass
 
 def main():
-    runApp()
+    runAppWithScreens(initialScreen='start')
 
 main()

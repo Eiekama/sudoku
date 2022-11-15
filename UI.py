@@ -52,13 +52,13 @@ class Button:
             drawLabel(self.label,self.left, self.top,
                       size=self.labelSize,fill='black',align=self.align)
     
-    def contains(self,point):
+    def contains(self,x,y):
         if self.align == 'top-left':
-            return (self.left<point[0]<self.left+self.width and
-                    self.top<point[1]<self.top+self.height)
+            return (self.left<x<self.left+self.width and
+                    self.top<y<self.top+self.height)
         elif self.align == 'center':
-            return (self.left-0.5*self.width<point[0]<self.left+0.5*self.width and
-                    self.top-0.5*self.height<point[1]<self.top+0.5*self.height)
+            return (self.left-0.5*self.width<x<self.left+0.5*self.width and
+                    self.top-0.5*self.height<y<self.top+0.5*self.height)
 
 class Screen:
     id = 0
