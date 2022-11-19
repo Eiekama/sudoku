@@ -167,7 +167,7 @@ def level_redrawAll(app):
     DrawBoard.drawBoard(app)
 
 def level_onMousePress(app, mouseX, mouseY):
-    if app.numPadSelection != None:
+    if app.selection != None and app.numPadSelection != None:
         app.board.setEntry(*app.selection, app.numPadSelection)
         app.selection = None
         # row, col = app.selection[0], app.selection[1]
@@ -202,33 +202,84 @@ def level_onKeyPress(app, key):
     elif key == 'escape':
         app.selection = None
         setActiveScreen('start')
-    #move to next non-fixed entry
-    elif key == 'j': #up
-        pass
-    elif key == 'k': #down
-        pass
-    elif key == 'h': #left
-        pass
-    elif key == 'l': #right
-        pass
-    #move to next empty entry
-    elif key == 'J': #shift-up
-        pass
-    elif key == 'K': #shift-down
-        pass
-    elif key == 'H': #shift-left
-        pass
-    elif key == 'L': #shift-right
-        pass
-    #move to next block
-    elif key == '∆': #option-up
-        pass
-    elif key == '˚': #option-down
-        pass
-    elif key == '˙': #option-left
-        pass
-    elif key == '¬': #option-right
-        pass
+    #move to next non-empty cell
+    elif key == 'w': #up
+        moveSelection(app,-1,0,'mode1')
+    elif key == 's': #down
+        moveSelection(app,1,0,'mode1')
+    elif key == 'a': #left
+        moveSelection(app,0,-1,'mode1')
+    elif key == 'd': #right
+        moveSelection(app,0,1,'mode1')
+    #move to next cell
+    elif key == 'W': #shift-up
+        moveSelection(app,-1,0,'mode2')
+    elif key == 'S': #shift-down
+        moveSelection(app,1,0,'mode2')
+    elif key == 'A': #shift-left
+        moveSelection(app,0,-1,'mode2')
+    elif key == 'D': #shift-right
+        moveSelection(app,0,1,'mode2')
+
+def moveSelection(app,drow,dcol,mode):
+    if mode == 'mode1':
+        if app.selection == None:
+            app.selection = findClosestEmptyCell(app.board.entries,-1,-1,abs(drow),abs(dcol))
+        else:
+            app.selection = findClosestEmptyCell(app.board.entries,*app.selection,drow,dcol)
+    elif mode == 'mode2':
+        if app.selection == None:
+            app.selection = 0,0
+        else:
+            row,col = app.selection
+            row += drow
+            col += dcol
+            if (row<0 or row>=app.board.rows):
+                row -= drow
+            if (col<0 or col>=app.board.cols):
+                col -= dcol
+            app.selection = row, col
+        
+
+def findClosestEmptyCell(entries,row,col,drow,dcol):
+    # i know the below is technically bad style but its a little difficult to write
+    # a helper function for this so im leaving it as is for now
+    rows,cols = len(entries),len(entries[0])
+    if dcol == 0:
+        leftBound,rightBound = col,col
+        if drow > 0:
+            rowsToCheck = rows-(row+1)
+        elif drow < 0:
+            rowsToCheck = row
+        while leftBound>=0 or rightBound<cols:
+            currRow = row
+            for _ in range(rowsToCheck):
+                currRow += drow
+                for column in [leftBound,rightBound]:
+                    if 0<=column<cols:
+                        currCol = column
+                        if entries[currRow][currCol] == 0: return (currRow,currCol)
+            leftBound -= 1
+            rightBound += 1
+    elif drow == 0:
+        topBound,bottomBound = row,row
+        if dcol > 0:
+            colsToCheck = cols-(col+1)
+        elif dcol < 0:
+            colsToCheck = col
+        while topBound>=0 or bottomBound<rows:
+            currCol = col
+            for _ in range(colsToCheck):
+                currCol += dcol
+                for r in [topBound,bottomBound]:
+                    if 0<=r<rows:
+                        currRow = r
+                        if entries[currRow][currCol] == 0: return (currRow,currCol)
+            topBound -= 1
+            bottomBound += 1
+    
+    #if theres no empty cell, selection doesnt change
+    return (row,col)
 
 def main():
     runAppWithScreens(initialScreen='start')
