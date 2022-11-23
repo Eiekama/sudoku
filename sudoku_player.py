@@ -1,4 +1,5 @@
 from cmu_cs3_graphics import *
+from PIL import Image
 from SudokuBoard import SudokuBoard
 from UI import *
 import DrawBoard
@@ -81,14 +82,19 @@ def setActiveScreen(screen):
 
 def start_onScreenStart(app):
     app.start_buttons = [
-            Button('Start',200,200,80,50,fill='lavender',align='center',labelSize=25),
-            Button('Help',200,270,80,50,fill='lavender',align='center',labelSize=25),
-        ]
+        Button(CMUImage(Image.open('assets/play_button.png')),
+               app.width//2-40,app.height//2+50,.6),
+        Button(CMUImage(Image.open('assets/help_button.png')),
+               app.width//2+95,app.height//2+90,.3),
+        Button(CMUImage(Image.open('assets/settings_button.png')),
+               app.width//2+95,app.height//2+15,.3),
+    ]
     app.start_buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
     app.start_buttons[1].AddListener(lambda : setActiveScreen('help'))
 
 def start_redrawAll(app):
-    drawLabel('Sudoku',200,100,size=30,align='center')
+    drawLabel('Sudoku',app.width//2,app.height//2-100,
+              size=60,align='center')
     for button in app.start_buttons:
         button.drawButton()
 
@@ -101,26 +107,52 @@ def start_onMousePress(app,mouseX,mouseY):
 ##################################
 
 def levelSelect_onScreenStart(app):
+    app.level = 0
     app.levelSelect_buttons = [
-            Button('Easy',200,50,90,35,fill='lavender',align='center',labelSize=24),
-            Button('Medium',200,100,90,35,fill='lavender',align='center',labelSize=24),
-            Button('Hard',200,150,90,35,fill='lavender',align='center',labelSize=24),
-            Button('Expert',200,200,90,35,fill='lavender',align='center',labelSize=24),
-            Button('Evil',200,250,90,35,fill='lavender',align='center',labelSize=24),
-            Button('Manual',200,300,90,35,fill='lavender',align='center',labelSize=24),
-            Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
-        ]
-    for i in range(6):
-        app.levelSelect_buttons[i].AddListener(setLevel(app,i))
+        Button(CMUImage(Image.open('assets/arrow_button.png').transpose(Image.FLIP_LEFT_RIGHT)),
+               app.width//2-135,app.height//2-50,.3),
+        Button(CMUImage(Image.open('assets/arrow_button.png')),
+               app.width//2+135,app.height//2-50,.3),
+        Button(CMUImage(Image.open('assets/play_button.png')),
+               app.width//2,app.height//2+100,.6),
+        Button(CMUImage(Image.open('assets/back_button.png')),
+            app.width-35,37,0.25),
+        # Button('Easy',200,50,90,35,fill='lavender',align='center',labelSize=24),
+        # Button('Medium',200,100,90,35,fill='lavender',align='center',labelSize=24),
+        # Button('Hard',200,150,90,35,fill='lavender',align='center',labelSize=24),
+        # Button('Expert',200,200,90,35,fill='lavender',align='center',labelSize=24),
+        # Button('Evil',200,250,90,35,fill='lavender',align='center',labelSize=24),
+        # Button('Manual',200,300,90,35,fill='lavender',align='center',labelSize=24),
+        # Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
+    ]
+    app.levelSelect_buttons[0].AddListener(changeLevel(app,-1))
+    app.levelSelect_buttons[1].AddListener(changeLevel(app,1))
+    app.levelSelect_buttons[-2].AddListener(startLevel(app))
     app.levelSelect_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
-def setLevel(app,i):
+def changeLevel(app,sign):
     def f():
-        app.board = SudokuBoard(i)
+        app.level += sign
+        app.level %= 6
+    return f
+
+def startLevel(app):
+    def f():
+        app.board = SudokuBoard(app.level)
         setActiveScreen('level')
     return f
 
 def levelSelect_redrawAll(app):
+    def getString(i):
+        if i == 0: return 'Easy'
+        elif i == 1: return 'Medium'
+        elif i == 2: return 'Hard'
+        elif i == 3: return 'Expert'
+        elif i == 4: return 'Evil'
+        elif i == 5: return 'Manual'
+    
+    drawLabel('Select Difficulty',20,20,size=50,align='top-left')
+    drawLabel(getString(app.level),app.width//2,app.height//2-50,size=50)
     for button in app.levelSelect_buttons:
         button.drawButton()
 
@@ -134,7 +166,8 @@ def levelSelect_onMousePress(app,mouseX,mouseY):
 
 def help_onScreenStart(app):
     app.help_buttons = [
-            Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
+            Button(CMUImage(Image.open('assets/back_button.png')),
+            app.width-35,37,0.25),
         ]
     app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
@@ -282,6 +315,6 @@ def findClosestEmptyCell(entries,row,col,drow,dcol):
     return (row,col)
 
 def main():
-    runAppWithScreens(initialScreen='start')
+    runAppWithScreens(initialScreen='start', width=450)
 
 main()

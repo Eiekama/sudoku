@@ -18,14 +18,17 @@ class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events
             eventhandler(*args, **keywargs)
 
 class Button:
-    def __init__(self,label,left,top,width,height,
-                 fill='black',border=None,borderWidth=0, align='left-top',
-                 labelSize=12):
-        self.label, self.labelSize = label, labelSize
-        self.left, self.top, self.width, self.height = left, top, width, height
-        self.fill, self.border, self.borderWidth, self.align = fill, border, borderWidth, align
+    def __init__(self,image,cx,cy,scale=None):
+        self.image = image
+        self.cx, self.cy = cx, cy
+        if scale == None:
+            self.width = image.image.width
+            self.height = image.image.height
+        else:
+            self.width = image.image.width * scale
+            self.height = image.image.height * scale
         self.onClicked = Event()
-    
+
     def AddListener(self,method):
         self.onClicked += method
 
@@ -34,28 +37,19 @@ class Button:
 
     def __eq__(self,other):
         return (isinstance(other,Button) and
-                self.label == other.label and
-                self.left == other.left and self.top == other.top and
-                self.width == other.width and self.height == other.height and
-                self.align == other.align)
+                self.cx == other.cx and self.cy == other.cy and
+                self.width == other.width and self.height == other.height)
     
     def __repr__(self):
-        return f'Button({self.label},{self.left},{self.top},{self.width},{self.height})'
+        return f'Button({self.cx},{self.cy},{self.width},{self.height})'
     
     def __hash__(self):
         return hash(str(self))
     
     def drawButton(self):
-        drawRect(self.left, self.top, self.width, self.height,
-                 fill=self.fill, border=self.border, borderWidth=self.borderWidth, align=self.align)
-        if self.label != None:
-            drawLabel(self.label,self.left, self.top,
-                      size=self.labelSize,fill='black',align=self.align)
+        drawImage(self.image, self.cx, self.cy, align='center',
+                  width=self.width, height=self.height)
     
     def contains(self,x,y):
-        if self.align == 'top-left':
-            return (self.left<x<self.left+self.width and
-                    self.top<y<self.top+self.height)
-        elif self.align == 'center':
-            return (self.left-0.5*self.width<x<self.left+0.5*self.width and
-                    self.top-0.5*self.height<y<self.top+0.5*self.height)
+        return (self.cx-0.5*self.width < x < self.cx+0.5*self.width and
+                self.cy-0.5*self.height < y < self.cy+0.5*self.height)
