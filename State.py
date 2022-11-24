@@ -1,15 +1,17 @@
 import os, random, copy
 import sudoku_solver
 
-class SudokuBoard:
+class State:
     builtinBoards = None
 
-    def __init__(self, type):
-        if SudokuBoard.builtinBoards == None:
-            SudokuBoard.builtinBoards = SudokuBoard.getFilePathsOfBoards()
+    def __init__(self, type, manualBoard=None):
+        if State.builtinBoards == None:
+            State.builtinBoards = State.getFilePathsOfBoards()
         
         assert(type in range(6))
         self.type = type
+
+        self.manualBoard = manualBoard
 
         self.rows = self.cols = self.blocks = 9
         self.entries = self.getBoard() #[[int,...],...]
@@ -39,10 +41,14 @@ class SudokuBoard:
             return f.read()
     
     def getBoard(self):
-        filePath = random.choice(SudokuBoard.builtinBoards[self.type])
-        fileContents = SudokuBoard.readFile(filePath)
-        board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
-        return board
+        if self.type == 5:
+            assert(self.manualBoard != None)
+            return self.manualBoard
+        else:
+            filePath = random.choice(State.builtinBoards[self.type])
+            fileContents = State.readFile(filePath)
+            board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
+            return board
 
     
     ##################################

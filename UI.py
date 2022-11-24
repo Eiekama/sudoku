@@ -1,4 +1,5 @@
 from cmu_cs3_graphics import *
+import math
 
 class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events-python/
  
@@ -34,17 +35,6 @@ class Button:
 
     def RemoveListener(self,method):
         self.onClicked -= method
-
-    def __eq__(self,other):
-        return (isinstance(other,Button) and
-                self.cx == other.cx and self.cy == other.cy and
-                self.width == other.width and self.height == other.height)
-    
-    def __repr__(self):
-        return f'Button({self.cx},{self.cy},{self.width},{self.height})'
-    
-    def __hash__(self):
-        return hash(str(self))
     
     def drawButton(self):
         drawImage(self.image, self.cx, self.cy, align='center',
@@ -53,3 +43,130 @@ class Button:
     def contains(self,x,y):
         return (self.cx-0.5*self.width < x < self.cx+0.5*self.width and
                 self.cy-0.5*self.height < y < self.cy+0.5*self.height)
+
+class SudokuBoard: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
+                   #         and https://cs3-112-f22.academy.cs.cmu.edu/notes/4189
+    def __init__(self,state,left,top,width,height,
+                 rows=9,cols=9,cellBorderWidth=1):
+        self.state = state
+        self.left,self.top,self.width,self.height = left,top,width,height
+        self.rows,self.cols,self.cellBorderWidth = rows,cols,cellBorderWidth
+        self.selection = None
+        self.numPadSelection = None
+        self.colors = {  'darkBorder':'black',
+                       'mediumBorder':'grey',
+                        'lightBorder':'darkgrey',
+                        'inverseDark':'white',
+                            'default': None,
+                           'selected':'gold',
+                              'wrong':'pink',
+                              'fixed':'whitesmoke',
+                      'selectedFixed':'goldenrod',
+                      'selectedWrong':'lightsalmon' }
+    
+    def drawBoard(self):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                self.drawCell(row,col)
+        self.drawBorders()
+    
+    def drawCell(self,row,col):
+        cellLeft, cellTop = self.getCellLeftTop(row, col)
+        cellWidth, cellHeight = self.getCellSize()
+
+        #draws cell background
+        bgColor = 'default'
+        labelColor = 'darkBorder'
+        if (row,col) == self.selection:
+            if self.state.isEntryFixed(row,col):
+                bgColor = 'selectedFixed'
+            elif self.state.isEntryWrong(row,col):
+                bgColor = 'selectedWrong'
+            else:
+                bgColor = 'selected'
+            labelColor = 'inverseDark'
+        elif self.state.isEntryWrong(row,col):
+            bgColor = 'wrong'
+        elif self.state.isEntryFixed(row,col):
+            bgColor = 'fixed'
+        drawRect(cellLeft, cellTop, cellWidth, cellHeight,
+                 fill=self.colors[bgColor], border=self.colors['mediumBorder'],
+                 borderWidth=self.cellBorderWidth)
+
+        #draws number in cell, if applicable
+        if self.state.entries[row][col] != 0:
+            cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
+            drawLabel(self.state.entries[row][col], cx, cy,
+                      size=25, fill=self.colors[labelColor])
+        
+        #draws legals (and numpad for selected cell)
+        cellWidth = (cellWidth-2*self.cellBorderWidth)/3
+        cellHeight = (cellHeight-2*self.cellBorderWidth)/3
+        for i in range(9):
+            x = cellLeft + self.cellBorderWidth + (i%3)*cellWidth
+            y = cellTop + self.cellBorderWidth + (i//3)*cellHeight
+            cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
+            if i+1 in self.state.legals[row][col]:
+                drawLabel(i+1, cx, cy,
+                            fill=self.colors['mediumBorder'], align='center')
+            elif (row,col) == self.selection and i+1 == self.numPadSelection:
+                drawLabel(i+1, cx, cy,
+                            fill=self.colors['lightBorder'], align='center')
+    
+    def getNumPadButton(self,x,y):
+        cellLeft, cellTop = self.getCellLeftTop(*self.selection)
+        cellWidth, cellHeight = self.getCellSize()
+
+        dx, dy = x-cellLeft, y-cellTop
+        row = math.floor(dy / (cellHeight/3))
+        col = math.floor(dx / (cellWidth/3))
+        if ((0 <= row < self.rows) and
+            (0 <= col < self.cols)):
+            return row*3 + col%3 + 1
+        else:
+            return None
+
+    def getCellLeftTop(self,row,col):
+        cellWidth, cellHeight = self.getCellSize()
+        cellLeft = self.left + col * cellWidth
+        cellTop = self.top + row * cellHeight
+        return (cellLeft, cellTop)
+
+    def getCellSize(self):
+        cellWidth = self.width / self.cols
+        cellHeight = self.height / self.rows
+        return (cellWidth, cellHeight)
+    
+    def getBlockLeftTop(self, index):
+        cellWidth, cellHeight = self.getCellSize()
+        topLeftRow = 3 * (index // 3)
+        topLeftCol = 3 * (index % 3)
+        blockLeft = self.left + topLeftCol * cellWidth
+        blockTop = self.top + topLeftRow * cellHeight
+        return (blockLeft, blockTop)
+
+    def drawBorders(self):
+        for i in range(9):
+            blockLeft, blockTop = self.getBlockLeftTop(i)
+            cellWidth, cellHeight = self.getCellSize()
+            drawRect(blockLeft, blockTop, 3*cellWidth, 3*cellHeight,
+                    fill=None, border=self.colors['darkBorder'],
+                    borderWidth=self.cellBorderWidth)
+        
+        borderWidth = 2*self.cellBorderWidth
+        drawRect(self.left-borderWidth, self.top-borderWidth,
+                    self.width+2*borderWidth, self.height+2*borderWidth,
+                    fill=None, border=self.colors['darkBorder'],
+                    borderWidth=borderWidth)
+    
+    def getCell(self, x, y):
+        dx = x - self.left
+        dy = y - self.top
+        cellWidth, cellHeight = self.getCellSize()
+        row = math.floor(dy / cellHeight)
+        col = math.floor(dx / cellWidth)
+        if ((0 <= row < self.rows) and
+            (0 <= col < self.cols)):
+            return (row, col)
+        else:
+            return None

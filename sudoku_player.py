@@ -1,8 +1,7 @@
 from cmu_cs3_graphics import *
 from PIL import Image
-from SudokuBoard import SudokuBoard
+from State import State
 from UI import *
-import DrawBoard
 
 ##################################################################
 # runAppWithScreens() and setActiveScreen(screen)
@@ -76,9 +75,11 @@ def setActiveScreen(screen):
 ##################################################################
 # end of runAppWithScreens() and setActiveScreen(screen)
 ##################################################################
+
 ##################################
 # Start Screen
 ##################################
+
 
 def start_onScreenStart(app):
     app.start_buttons = [
@@ -98,13 +99,15 @@ def start_redrawAll(app):
     for button in app.start_buttons:
         button.drawButton()
 
-def start_onMousePress(app,mouseX,mouseY):
+def start_onMouseRelease(app,mouseX,mouseY):
     for button in app.start_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
+
 
 ##################################
 # Level Select Screen
 ##################################
+
 
 def levelSelect_onScreenStart(app):
     app.level = 0
@@ -117,13 +120,6 @@ def levelSelect_onScreenStart(app):
                app.width//2,app.height//2+100,.6),
         Button(CMUImage(Image.open('assets/back_button.png')),
             app.width-35,37,0.25),
-        # Button('Easy',200,50,90,35,fill='lavender',align='center',labelSize=24),
-        # Button('Medium',200,100,90,35,fill='lavender',align='center',labelSize=24),
-        # Button('Hard',200,150,90,35,fill='lavender',align='center',labelSize=24),
-        # Button('Expert',200,200,90,35,fill='lavender',align='center',labelSize=24),
-        # Button('Evil',200,250,90,35,fill='lavender',align='center',labelSize=24),
-        # Button('Manual',200,300,90,35,fill='lavender',align='center',labelSize=24),
-        # Button('Back',200,350,90,35,fill='lavender',align='center',labelSize=24),
     ]
     app.levelSelect_buttons[0].AddListener(changeLevel(app,-1))
     app.levelSelect_buttons[1].AddListener(changeLevel(app,1))
@@ -138,8 +134,12 @@ def changeLevel(app,sign):
 
 def startLevel(app):
     def f():
-        app.board = SudokuBoard(app.level)
-        setActiveScreen('level')
+        if app.level == 5:
+            setActiveScreen('manual')
+        else:
+            app.state = State(app.level)
+            app.board = SudokuBoard(app.state,20,20,360,360)
+            setActiveScreen('level')
     return f
 
 def levelSelect_redrawAll(app):
@@ -156,7 +156,7 @@ def levelSelect_redrawAll(app):
     for button in app.levelSelect_buttons:
         button.drawButton()
 
-def levelSelect_onMousePress(app,mouseX,mouseY):
+def levelSelect_onMouseRelease(app,mouseX,mouseY):
     for button in app.levelSelect_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
@@ -176,64 +176,74 @@ def help_redrawAll(app):
     for button in app.help_buttons:
         button.drawButton()
 
-def help_onMousePress(app,mouseX,mouseY):
+def help_onMouseRelease(app,mouseX,mouseY):
     for button in app.help_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
+
+
+##################################
+# Manual Screen
+##################################
+
+
+def manual_onScreenStart(app):
+    app.manual_buttons = [
+            Button(CMUImage(Image.open('assets/back_button.png')),
+            app.width-35,37,0.25),
+        ]
+    app.manual_buttons[-1].AddListener(lambda : setActiveScreen('levelSelect'))
+
+def manual_redrawAll(app):
+    for button in app.manual_buttons:
+        button.drawButton()
+
+def manual_onMouseRelease(app,mouseX,mouseY):
+    for button in app.manual_buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
+
 
 ##################################
 # Level Screen
 ##################################
-def readFile(path):
-    with open(path, "rt") as f:
-        return f.read()
+
 
 def level_onScreenStart(app):
-    app.boardLeft = 20
-    app.boardTop = 20
-    app.boardWidth = app.boardHeight = 360
-    app.cellBorderWidth = 1
-
-    app.selection = None
-    app.numPadSelection = None
+    pass
 
 def level_redrawAll(app):
-    DrawBoard.drawBoard(app)
+    app.board.drawBoard()
 
 def level_onMousePress(app, mouseX, mouseY):
-    if app.selection != None and app.numPadSelection != None:
-        app.board.setEntry(*app.selection, app.numPadSelection)
-        app.selection = None
-        # row, col = app.selection[0], app.selection[1]
-        # if app.numPadSelection not in app.board.legals[row][col]:
-        #     app.board.addLegal(row, col, app.numPadSelection)
+    selectedCell = app.board.getCell(mouseX, mouseY)
+    if selectedCell != None:
+        app.board.selection = selectedCell
+    
+    if app.board.selection != None and app.board.numPadSelection != None:
+        app.state.setEntry(*app.board.selection, app.board.numPadSelection)
+        # row, col = app.board.selection[0], app.board.selection[1]
+        # if app.board.numPadSelection not in app.state.legals[row][col]:
+        #     app.state.addLegal(row, col, app.board.numPadSelection)
         # else:
-        #     app.board.removeLegal(row, col, app.numPadSelection)
+        #     app.state.removeLegal(row, col, app.board.numPadSelection)
 
 def level_onMouseMove(app, mouseX, mouseY):
-    selectedCell = DrawBoard.getCell(app, mouseX, mouseY)
-    if selectedCell != None:
-        if app.board.isEntryFixed(*selectedCell):
-            app.selection = None
-        else:
-            app.selection = selectedCell
-    else:
-        app.selection = None
-    
-    if app.selection != None:
-        selectedNumPadButton = DrawBoard.getNumPadButton(app, mouseX, mouseY)
+    selectedCell = app.board.getCell(mouseX, mouseY)
+    if (app.board.selection != None and 
+        selectedCell == app.board.selection and
+        not app.state.isEntryFixed(*app.board.selection)):
+        selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
         if selectedNumPadButton != None:
-            app.numPadSelection = selectedNumPadButton
+            app.board.numPadSelection = selectedNumPadButton
     else:
-        app.numPadSelection = None
+        app.board.numPadSelection = None
 
 def level_onKeyPress(app, key):
     if key in {'0','1','2','3','4','5','6','7','8','9'}:
-        if (app.selection != None and
-            not app.board.isEntryFixed(*app.selection)):
-            app.board.setEntry(*app.selection, int(key))
-            app.selection = None
+        if (app.board.selection != None and
+            not app.state.isEntryFixed(*app.board.selection)):
+            app.state.setEntry(*app.board.selection, int(key))
     elif key == 'escape':
-        app.selection = None
+        app.board.selection = None
         setActiveScreen('start')
     #move to next non-empty cell
     elif key == 'w': #up
@@ -256,22 +266,22 @@ def level_onKeyPress(app, key):
 
 def moveSelection(app,drow,dcol,mode):
     if mode == 'mode1':
-        if app.selection == None:
-            app.selection = findClosestEmptyCell(app.board.entries,-1,-1,abs(drow),abs(dcol))
+        if app.board.selection == None:
+            app.board.selection = findClosestEmptyCell(app.state.entries,-1,-1,abs(drow),abs(dcol))
         else:
-            app.selection = findClosestEmptyCell(app.board.entries,*app.selection,drow,dcol)
+            app.board.selection = findClosestEmptyCell(app.state.entries,*app.board.selection,drow,dcol)
     elif mode == 'mode2':
-        if app.selection == None:
-            app.selection = 0,0
+        if app.board.selection == None:
+            app.board.selection = 0,0
         else:
-            row,col = app.selection
+            row,col = app.board.selection
             row += drow
             col += dcol
             if (row<0 or row>=app.board.rows):
                 row -= drow
             if (col<0 or col>=app.board.cols):
                 col -= dcol
-            app.selection = row, col
+            app.board.selection = row, col
         
 
 def findClosestEmptyCell(entries,row,col,drow,dcol):
