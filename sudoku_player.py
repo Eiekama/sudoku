@@ -1,6 +1,7 @@
 from cmu_cs3_graphics import *
 from PIL import Image
-from State import State
+import re
+from State import *
 from UI import *
 
 ##################################################################
@@ -77,7 +78,7 @@ def setActiveScreen(screen):
 ##################################################################
 
 ##################################
-# Start Screen
+#1 Start Screen
 ##################################
 
 
@@ -105,7 +106,29 @@ def start_onMouseRelease(app,mouseX,mouseY):
 
 
 ##################################
-# Level Select Screen
+#2 Help Screen
+##################################
+
+
+def help_onScreenStart(app):
+    app.help_buttons = [
+        Button(CMUImage(Image.open('assets/back_button.png')),
+        app.width-35,37,0.25),
+    ]
+    app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
+
+def help_redrawAll(app):
+    drawLabel('insert helpful text here',200,150,size=20,align='center')
+    for button in app.help_buttons:
+        button.drawButton()
+
+def help_onMouseRelease(app,mouseX,mouseY):
+    for button in app.help_buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
+
+
+##################################
+#3 Level Select Screen
 ##################################
 
 
@@ -135,7 +158,8 @@ def changeLevel(app,sign):
 def startLevel(app):
     def f():
         if app.level == 5:
-            setActiveScreen('manual')
+            app.board = Board(20,20,360,360)
+            setActiveScreen('manualSelect')
         else:
             app.state = State(app.level)
             app.board = SudokuBoard(app.state,20,20,360,360)
@@ -160,42 +184,108 @@ def levelSelect_onMouseRelease(app,mouseX,mouseY):
     for button in app.levelSelect_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
+
 ##################################
-# Help Screen
+#4 Manual Select Screen
 ##################################
 
-def help_onScreenStart(app):
-    app.help_buttons = [
-            Button(CMUImage(Image.open('assets/back_button.png')),
-            app.width-35,37,0.25),
-        ]
-    app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
-def help_redrawAll(app):
-    drawLabel('insert helpful text here',200,150,size=20,align='center')
-    for button in app.help_buttons:
+def manualSelect_onScreenStart(app):
+    app.manualSelect_buttons = [
+        Button(CMUImage(Image.open('assets/arrow_button.png')),
+               app.width//2+135,app.height//2-50,.3),
+        Button(CMUImage(Image.open('assets/arrow_button.png')),
+               app.width//2+135,app.height//2+50,.3),
+        Button(CMUImage(Image.open('assets/back_button.png')),
+        app.width-35,37,0.25),
+    ]
+    app.manualSelect_buttons[0].AddListener(getBoardFromInput(app))
+    app.manualSelect_buttons[1].AddListener(lambda : setActiveScreen('manual'))
+    app.manualSelect_buttons[-1].AddListener(lambda : setActiveScreen('levelSelect'))
+
+def getBoardFromInput(app):
+    def f():
+        entries = [[0 for _ in range(9)] for _ in range(9)]
+        i = 0
+        while i<9:
+            input = app.getTextInput(f'Enter values for row {i+1}'
+                                     +' (Use 0 for empty cells,'
+                                     +' and input q to abort)')
+            match = re.fullmatch("\s*(\d\s*){9}",input)
+            if match != None:
+                row = []
+                for c in input:
+                    if c in {'0','1','2','3','4','5','6','7','8','9'}:
+                        row.append(int(c))
+                entries[i] = row
+                i += 1
+            elif input == 'q': break
+        if i == 9:
+            app.state = State.tryCreateState(entries)
+            if app.state != None:
+                app.board = SudokuBoard(app.state,20,20,360,360)
+                setActiveScreen('level')
+    return f
+
+def manualSelect_redrawAll(app):
+    drawLabel('Enter by text',app.width//2+75,app.height//2-50,size=35,align='right')
+    drawLabel('Enter graphically',app.width//2+75,app.height//2+50,size=35,align='right')
+    for button in app.manualSelect_buttons:
         button.drawButton()
 
-def help_onMouseRelease(app,mouseX,mouseY):
-    for button in app.help_buttons:
+def manualSelect_onMouseRelease(app,mouseX,mouseY):
+    for button in app.manualSelect_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
 
 ##################################
-# Manual Screen
+#5 Manual Screen
 ##################################
 
 
 def manual_onScreenStart(app):
     app.manual_buttons = [
-            Button(CMUImage(Image.open('assets/back_button.png')),
-            app.width-35,37,0.25),
-        ]
+        Button(CMUImage(Image.open('assets/play_button.png')),
+            app.width+20,app.height-100,.6),
+        Button(CMUImage(Image.open('assets/back_button.png')),
+        app.width-35,37,0.25),
+    ]
+    app.manual_buttons[0].AddListener(makeLevel(app))
     app.manual_buttons[-1].AddListener(lambda : setActiveScreen('levelSelect'))
 
+def makeLevel(app):
+    def f():
+        app.state = State.tryCreateState(app.board.entries)
+        if app.state != None:
+            app.board = SudokuBoard(app.state,20,20,360,360)
+            setActiveScreen('level')
+        else:
+            app.board.entries = [[0 for _ in range(app.board.cols)] for _ in range(app.board.rows)]
+    return f
+
 def manual_redrawAll(app):
+    app.board.drawBoard()
     for button in app.manual_buttons:
         button.drawButton()
+
+def manual_onMousePress(app, mouseX, mouseY):
+    selectedCell = app.board.getCell(mouseX, mouseY)
+    if selectedCell != None:
+        app.board.selection = selectedCell
+    
+    if app.board.selection != None and app.board.numPadSelection != None:
+        row,col = app.board.selection[0],app.board.selection[1]
+        app.board.entries[row][col] = app.board.numPadSelection
+
+def manual_onMouseMove(app, mouseX, mouseY):
+    selectedCell = app.board.getCell(mouseX, mouseY)
+    if (app.board.selection != None and 
+        selectedCell == app.board.selection):
+        selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
+        if selectedNumPadButton != None:
+            app.board.numPadSelection = selectedNumPadButton
+    else:
+        app.board.numPadSelection = None
 
 def manual_onMouseRelease(app,mouseX,mouseY):
     for button in app.manual_buttons:
@@ -203,15 +293,40 @@ def manual_onMouseRelease(app,mouseX,mouseY):
 
 
 ##################################
-# Level Screen
+#6 Level Screen
 ##################################
 
 
 def level_onScreenStart(app):
-    pass
+    y = 48
+    app.level_buttons = [
+        Button(CMUImage(Image.open('assets/home_button.png')),
+            app.width-35,y,0.6),
+            Button(CMUImage(Image.open('assets/help_button_small.png')),
+            app.width-35,y+60,0.6),
+            Button(CMUImage(Image.open('assets/hint_button.png')),
+            app.width-35,y+120,0.6),
+            Button(CMUImage(Image.open('assets/undo_button.png')),
+            app.width-35,y+180,0.6),
+            Button(CMUImage(Image.open('assets/undo_button.png').transpose(Image.FLIP_LEFT_RIGHT)),
+            app.width-35,y+240,0.6),
+            Button(CMUImage(Image.open('assets/notes_button.png')),
+            app.width-35,y+300,0.6),
+    ]
+    app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
+    app.level_buttons[-1].AddListener(toggleAutoLegals(app))
+
+def toggleAutoLegals(app):
+    def f():
+        app.state.isLegalsAuto = not app.state.isLegalsAuto
+        if app.state.isLegalsAuto: app.state.updateAllLegals()
+    return f
+    
 
 def level_redrawAll(app):
     app.board.drawBoard()
+    for button in app.level_buttons:
+        button.drawButton()
 
 def level_onMousePress(app, mouseX, mouseY):
     selectedCell = app.board.getCell(mouseX, mouseY)
@@ -236,6 +351,10 @@ def level_onMouseMove(app, mouseX, mouseY):
             app.board.numPadSelection = selectedNumPadButton
     else:
         app.board.numPadSelection = None
+
+def level_onMouseRelease(app,mouseX,mouseY):
+    for button in app.level_buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
 
 def level_onKeyPress(app, key):
     if key in {'0','1','2','3','4','5','6','7','8','9'}:

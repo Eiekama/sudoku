@@ -44,13 +44,16 @@ class Button:
         return (self.cx-0.5*self.width < x < self.cx+0.5*self.width and
                 self.cy-0.5*self.height < y < self.cy+0.5*self.height)
 
-class SudokuBoard: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
-                   #         and https://cs3-112-f22.academy.cs.cmu.edu/notes/4189
-    def __init__(self,state,left,top,width,height,
+class Message:
+    pass
+
+class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
+             #         and https://cs3-112-f22.academy.cs.cmu.edu/notes/4189
+    def __init__(self,left,top,width,height,
                  rows=9,cols=9,cellBorderWidth=1):
-        self.state = state
         self.left,self.top,self.width,self.height = left,top,width,height
         self.rows,self.cols,self.cellBorderWidth = rows,cols,cellBorderWidth
+        self.entries = [[0 for _ in range(rows)] for _ in range(cols)]
         self.selection = None
         self.numPadSelection = None
         self.colors = {  'darkBorder':'black',
@@ -63,13 +66,13 @@ class SudokuBoard: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/41
                               'fixed':'whitesmoke',
                       'selectedFixed':'goldenrod',
                       'selectedWrong':'lightsalmon' }
-    
+
     def drawBoard(self):
         for row in range(self.rows):
             for col in range(self.cols):
                 self.drawCell(row,col)
         self.drawBorders()
-    
+
     def drawCell(self,row,col):
         cellLeft, cellTop = self.getCellLeftTop(row, col)
         cellWidth, cellHeight = self.getCellSize()
@@ -78,41 +81,29 @@ class SudokuBoard: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/41
         bgColor = 'default'
         labelColor = 'darkBorder'
         if (row,col) == self.selection:
-            if self.state.isEntryFixed(row,col):
-                bgColor = 'selectedFixed'
-            elif self.state.isEntryWrong(row,col):
-                bgColor = 'selectedWrong'
-            else:
-                bgColor = 'selected'
+            bgColor = 'selected'
             labelColor = 'inverseDark'
-        elif self.state.isEntryWrong(row,col):
-            bgColor = 'wrong'
-        elif self.state.isEntryFixed(row,col):
-            bgColor = 'fixed'
         drawRect(cellLeft, cellTop, cellWidth, cellHeight,
                  fill=self.colors[bgColor], border=self.colors['mediumBorder'],
                  borderWidth=self.cellBorderWidth)
 
         #draws number in cell, if applicable
-        if self.state.entries[row][col] != 0:
+        if self.entries[row][col] != 0:
             cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
-            drawLabel(self.state.entries[row][col], cx, cy,
+            drawLabel(self.entries[row][col], cx, cy,
                       size=25, fill=self.colors[labelColor])
         
-        #draws legals (and numpad for selected cell)
+        #draws numpad
         cellWidth = (cellWidth-2*self.cellBorderWidth)/3
         cellHeight = (cellHeight-2*self.cellBorderWidth)/3
         for i in range(9):
             x = cellLeft + self.cellBorderWidth + (i%3)*cellWidth
             y = cellTop + self.cellBorderWidth + (i//3)*cellHeight
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
-            if i+1 in self.state.legals[row][col]:
-                drawLabel(i+1, cx, cy,
-                            fill=self.colors['mediumBorder'], align='center')
-            elif (row,col) == self.selection and i+1 == self.numPadSelection:
+            if (row,col) == self.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
                             fill=self.colors['lightBorder'], align='center')
-    
+
     def getNumPadButton(self,x,y):
         cellLeft, cellTop = self.getCellLeftTop(*self.selection)
         cellWidth, cellHeight = self.getCellSize()
@@ -170,3 +161,52 @@ class SudokuBoard: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/41
             return (row, col)
         else:
             return None
+
+
+class SudokuBoard(Board): 
+    def __init__(self,state,left,top,width,height):
+        super().__init__(left,top,width,height)
+        self.state = state
+    
+    def drawCell(self,row,col):
+        cellLeft, cellTop = self.getCellLeftTop(row, col)
+        cellWidth, cellHeight = self.getCellSize()
+
+        #draws cell background
+        bgColor = 'default'
+        labelColor = 'darkBorder'
+        if (row,col) == self.selection:
+            if self.state.isEntryFixed(row,col):
+                bgColor = 'selectedFixed'
+            elif self.state.isEntryWrong(row,col):
+                bgColor = 'selectedWrong'
+            else:
+                bgColor = 'selected'
+            labelColor = 'inverseDark'
+        elif self.state.isEntryWrong(row,col):
+            bgColor = 'wrong'
+        elif self.state.isEntryFixed(row,col):
+            bgColor = 'fixed'
+        drawRect(cellLeft, cellTop, cellWidth, cellHeight,
+                 fill=self.colors[bgColor], border=self.colors['mediumBorder'],
+                 borderWidth=self.cellBorderWidth)
+
+        #draws number in cell, if applicable
+        if self.state.entries[row][col] != 0:
+            cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
+            drawLabel(self.state.entries[row][col], cx, cy,
+                      size=25, fill=self.colors[labelColor])
+        
+        #draws legals (and numpad for selected cell)
+        cellWidth = (cellWidth-2*self.cellBorderWidth)/3
+        cellHeight = (cellHeight-2*self.cellBorderWidth)/3
+        for i in range(9):
+            x = cellLeft + self.cellBorderWidth + (i%3)*cellWidth
+            y = cellTop + self.cellBorderWidth + (i//3)*cellHeight
+            cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
+            if i+1 in self.state.legals[row][col]:
+                drawLabel(i+1, cx, cy,
+                            fill=self.colors['mediumBorder'], align='center')
+            elif (row,col) == self.selection and i+1 == self.numPadSelection:
+                drawLabel(i+1, cx, cy,
+                            fill=self.colors['lightBorder'], align='center')
