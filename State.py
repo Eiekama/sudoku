@@ -23,6 +23,8 @@ class State:
         self.isLegalsAuto = False if (self.type == 0 or self.type == 5) else True
         self.legals = [[set() for _ in range(self.cols)] for _ in range(self.rows)]
         if self.isLegalsAuto: self.updateAllLegals()
+
+        self.gameOver = False
     
     @staticmethod
     def tryCreateState(board):
@@ -115,6 +117,32 @@ class State:
     def clearLegals(self,row,col):
         self.legals[row][col] = set()
     
+    def getSingleton(self):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if len(self.legals[row][col]) == 1:
+                    return row,col,list(self.legals[row][col])[0]
+        return None
+
+    # def getSingleton(self):
+    #     for row in range(self.rows):
+    #         for col in range(self.cols):
+    #             for legal in self.legals[row][col]:
+    #                 if self.isSingleton(row,col,legal): return (row,col,legal)
+    #     return None
+
+    # def isSingleton(self,row,col,legal):
+    #     for region in [self.getRowCells(row),self.getColCells(col),self.getBlockCells(row,col)]:
+    #         if legal not in self.getLegalsInRegion(region,row,col): return True
+    #     return False
+
+    # def getLegalsInRegion(self,region,row,col):
+    #     seen = set()
+    #     for otherRow,otherCol in region:
+    #         if (otherRow,otherCol) == (row,col): continue
+    #         for legal in self.legals[otherRow][otherCol]:
+    #             seen.add(legal)
+    #     return seen
     ##################################
     # Get Regions
     ##################################
@@ -157,10 +185,14 @@ class State:
     # Entries related
     ##################################
 
-    def setEntry(self,row,col,n):
-        self.entries[row][col] = n
-        self.clearLegals(row,col)
-        if self.isLegalsAuto: self.updateLegals(row,col)
+    def setEntry(self,app,row,col,n):
+        if not self.gameOver:
+            self.entries[row][col] = n
+            self.clearLegals(row,col)
+            if self.isLegalsAuto: self.updateLegals(row,col)
+            if self.entries == self.solution:
+                app.message = 'you win!'
+                self.gameOver = True
 
     def isEntryCorrect(self,row,col):
         return self.entries[row][col] == self.solution[row][col]

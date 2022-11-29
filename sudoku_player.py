@@ -1,81 +1,8 @@
-from cmu_cs3_graphics import *
-from PIL import Image
+from cmu_graphics import *
+from PIL import Image as PILImage
 import re
 from State import *
 from UI import *
-
-##################################################################
-# runAppWithScreens() and setActiveScreen(screen)
-##################################################################
-
-def runAppWithScreens(initialScreen, *args, **kwargs):
-    appFnNames = ['onAppStart',
-                  'onKeyPress', 'onKeyHold', 'onKeyRelease',
-                  'onMousePress', 'onMouseDrag', 'onMouseRelease',
-                  'onMouseMove', 'onStep', 'redrawAll']
-             
-    def checkForAppFns():
-        globalVars = globals()
-        for appFnName in appFnNames:
-            if appFnName in globalVars:
-                raise Exception(f'Do not define {appFnName} when using screens')
-   
-    def getScreenFnNames(appFnName):
-        globalVars = globals()
-        screenFnNames = [ ]
-        for globalVarName in globalVars:
-            screenAppSuffix = f'_{appFnName}'
-            if globalVarName.endswith(screenAppSuffix):
-                screenFnNames.append(globalVarName)
-        return screenFnNames
-   
-    def wrapScreenFns():
-        globalVars = globals()
-        for appFnName in appFnNames:
-            screenFnNames = getScreenFnNames(appFnName)
-            if (screenFnNames != [ ]) or (appFnName == 'onAppStart'):
-                globalVars[appFnName] = makeAppFnWrapper(appFnName)
-   
-    def makeAppFnWrapper(appFnName):
-        if appFnName == 'onAppStart':
-            def onAppStartWrapper(app):
-                globalVars = globals()
-                for screenFnName in getScreenFnNames('onScreenStart'):
-                    screenFn = globalVars[screenFnName]
-                    screenFn(app)
-            return onAppStartWrapper
-        else:
-            def appFnWrapper(*args):
-                globalVars = globals()
-                screen = globalVars['_activeScreen']
-                wrappedFnName = ('onScreenStart'
-                                 if appFnName == 'onAppStart' else appFnName)
-                screenFnName = f'{screen}_{wrappedFnName}'
-                if screenFnName in globalVars:
-                    screenFn = globalVars[screenFnName]
-                    return screenFn(*args)
-            return appFnWrapper
-
-    def go():
-        checkForAppFns()
-        wrapScreenFns()
-        setActiveScreen(initialScreen)
-        runApp(*args, **kwargs)
-   
-    go()
-
-def setActiveScreen(screen):
-    globalVars = globals()
-    if (screen in [None, '']) or (not isinstance(screen, str)):
-        raise Exception(f'{repr(screen)} is not a valid screen')
-    redrawAllFnName = f'{screen}_redrawAll'
-    if redrawAllFnName not in globalVars:
-        raise Exception(f'Screen {screen} requires {redrawAllFnName}()')
-    globalVars['_activeScreen'] = screen
-
-##################################################################
-# end of runAppWithScreens() and setActiveScreen(screen)
-##################################################################
 
 ##################################
 #1 Start Screen
@@ -83,12 +10,18 @@ def setActiveScreen(screen):
 
 
 def start_onScreenStart(app):
+    app.boardLeft = 20
+    app.boardTop = 20
+    app.boardWidth = app.boardHeight = 360
+
+    app.symbToNum = {'!':1,'@':2,'#':3,'$':4,'%':5,'^':6,'&':7,'*':8,'(':9,}
+
     app.start_buttons = [
-        Button(CMUImage(Image.open('assets/play_button.png')),
+        Button(CMUImage(PILImage.open('assets/play_button.png')),
                app.width//2-40,app.height//2+50,.6),
-        Button(CMUImage(Image.open('assets/help_button.png')),
+        Button(CMUImage(PILImage.open('assets/help_button.png')),
                app.width//2+95,app.height//2+90,.3),
-        Button(CMUImage(Image.open('assets/settings_button.png')),
+        Button(CMUImage(PILImage.open('assets/settings_button.png')),
                app.width//2+95,app.height//2+15,.3),
     ]
     app.start_buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
@@ -112,13 +45,17 @@ def start_onMouseRelease(app,mouseX,mouseY):
 
 def help_onScreenStart(app):
     app.help_buttons = [
-        Button(CMUImage(Image.open('assets/back_button.png')),
+        Button(CMUImage(PILImage.open('assets/back_button.png')),
         app.width-35,37,0.25),
     ]
     app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
 def help_redrawAll(app):
-    drawLabel('insert helpful text here',200,150,size=20,align='center')
+    drawLabel('wasd or shift-wasd to move',20,50,size=20,align='left')
+    drawLabel('press n to autoplay singletons',20,100,size=20,align='left')
+    drawLabel('in medium or higher difficulty',20,140,size=20,align='left')
+    drawLabel('numbers keys to enter values',20,190,size=20,align='left')
+    drawLabel('shift-number keys to enter legals',20,240,size=20,align='left')
     for button in app.help_buttons:
         button.drawButton()
 
@@ -135,13 +72,13 @@ def help_onMouseRelease(app,mouseX,mouseY):
 def levelSelect_onScreenStart(app):
     app.level = 0
     app.levelSelect_buttons = [
-        Button(CMUImage(Image.open('assets/arrow_button.png').transpose(Image.FLIP_LEFT_RIGHT)),
+        Button(CMUImage(PILImage.open('assets/arrow_button.png').transpose(PILImage.FLIP_LEFT_RIGHT)),
                app.width//2-135,app.height//2-50,.3),
-        Button(CMUImage(Image.open('assets/arrow_button.png')),
+        Button(CMUImage(PILImage.open('assets/arrow_button.png')),
                app.width//2+135,app.height//2-50,.3),
-        Button(CMUImage(Image.open('assets/play_button.png')),
+        Button(CMUImage(PILImage.open('assets/play_button.png')),
                app.width//2,app.height//2+100,.6),
-        Button(CMUImage(Image.open('assets/back_button.png')),
+        Button(CMUImage(PILImage.open('assets/back_button.png')),
             app.width-35,37,0.25),
     ]
     app.levelSelect_buttons[0].AddListener(changeLevel(app,-1))
@@ -157,12 +94,14 @@ def changeLevel(app,sign):
 
 def startLevel(app):
     def f():
+        app.message = None
+        app.notetakingMode = False #temp til right click is a thing
         if app.level == 5:
-            app.board = Board(20,20,360,360)
+            app.board = Board(app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('manualSelect')
         else:
             app.state = State(app.level)
-            app.board = SudokuBoard(app.state,20,20,360,360)
+            app.board = SudokuBoard(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('level')
     return f
 
@@ -192,11 +131,11 @@ def levelSelect_onMouseRelease(app,mouseX,mouseY):
 
 def manualSelect_onScreenStart(app):
     app.manualSelect_buttons = [
-        Button(CMUImage(Image.open('assets/arrow_button.png')),
+        Button(CMUImage(PILImage.open('assets/arrow_button.png')),
                app.width//2+135,app.height//2-50,.3),
-        Button(CMUImage(Image.open('assets/arrow_button.png')),
+        Button(CMUImage(PILImage.open('assets/arrow_button.png')),
                app.width//2+135,app.height//2+50,.3),
-        Button(CMUImage(Image.open('assets/back_button.png')),
+        Button(CMUImage(PILImage.open('assets/back_button.png')),
         app.width-35,37,0.25),
     ]
     app.manualSelect_buttons[0].AddListener(getBoardFromInput(app))
@@ -223,7 +162,7 @@ def getBoardFromInput(app):
         if i == 9:
             app.state = State.tryCreateState(entries)
             if app.state != None:
-                app.board = SudokuBoard(app.state,20,20,360,360)
+                app.board = SudokuBoard(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
                 setActiveScreen('level')
     return f
 
@@ -245,9 +184,9 @@ def manualSelect_onMouseRelease(app,mouseX,mouseY):
 
 def manual_onScreenStart(app):
     app.manual_buttons = [
-        Button(CMUImage(Image.open('assets/play_button.png')),
+        Button(CMUImage(PILImage.open('assets/play_button.png')),
             app.width+20,app.height-100,.6),
-        Button(CMUImage(Image.open('assets/back_button.png')),
+        Button(CMUImage(PILImage.open('assets/back_button.png')),
         app.width-35,37,0.25),
     ]
     app.manual_buttons[0].AddListener(makeLevel(app))
@@ -257,7 +196,7 @@ def makeLevel(app):
     def f():
         app.state = State.tryCreateState(app.board.entries)
         if app.state != None:
-            app.board = SudokuBoard(app.state,20,20,360,360)
+            app.board = SudokuBoard(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('level')
         else:
             app.board.entries = [[0 for _ in range(app.board.cols)] for _ in range(app.board.rows)]
@@ -300,17 +239,17 @@ def manual_onMouseRelease(app,mouseX,mouseY):
 def level_onScreenStart(app):
     y = 48
     app.level_buttons = [
-        Button(CMUImage(Image.open('assets/home_button.png')),
+        Button(CMUImage(PILImage.open('assets/home_button.png')),
             app.width-35,y,0.6),
-            Button(CMUImage(Image.open('assets/help_button_small.png')),
+            Button(CMUImage(PILImage.open('assets/help_button_small.png')),
             app.width-35,y+60,0.6),
-            Button(CMUImage(Image.open('assets/hint_button.png')),
+            Button(CMUImage(PILImage.open('assets/hint_button.png')),
             app.width-35,y+120,0.6),
-            Button(CMUImage(Image.open('assets/undo_button.png')),
+            Button(CMUImage(PILImage.open('assets/undo_button.png')),
             app.width-35,y+180,0.6),
-            Button(CMUImage(Image.open('assets/undo_button.png').transpose(Image.FLIP_LEFT_RIGHT)),
+            Button(CMUImage(PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT)),
             app.width-35,y+240,0.6),
-            Button(CMUImage(Image.open('assets/notes_button.png')),
+            Button(CMUImage(PILImage.open('assets/notes_button.png')),
             app.width-35,y+300,0.6),
     ]
     app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
@@ -324,64 +263,92 @@ def toggleAutoLegals(app):
     
 
 def level_redrawAll(app):
+    if app.message != None:
+        drawLabel(app.message,app.width//2,400,size=20)
     app.board.drawBoard()
     for button in app.level_buttons:
         button.drawButton()
 
 def level_onMousePress(app, mouseX, mouseY):
-    selectedCell = app.board.getCell(mouseX, mouseY)
-    if selectedCell != None:
-        app.board.selection = selectedCell
-    
-    if app.board.selection != None and app.board.numPadSelection != None:
-        app.state.setEntry(*app.board.selection, app.board.numPadSelection)
-        # row, col = app.board.selection[0], app.board.selection[1]
-        # if app.board.numPadSelection not in app.state.legals[row][col]:
-        #     app.state.addLegal(row, col, app.board.numPadSelection)
-        # else:
-        #     app.state.removeLegal(row, col, app.board.numPadSelection)
+    if not app.state.gameOver:
+        selectedCell = app.board.getCell(mouseX, mouseY)
+        if selectedCell != None:
+            app.board.selection = selectedCell
+        
+        if app.board.selection != None and app.board.numPadSelection != None:
+            if not app.notetakingMode:
+                app.state.setEntry(app,*app.board.selection, app.board.numPadSelection)
+            else:
+                row, col = app.board.selection[0], app.board.selection[1]
+                if app.state.entries[row][col] == 0:
+                    if app.board.numPadSelection not in app.state.legals[row][col]:
+                        app.state.addLegal(row, col, app.board.numPadSelection)
+                    else:
+                        app.state.removeLegal(row, col, app.board.numPadSelection)
+        
+        if (app.width-50 < mouseX < app.width and app.height-50 < mouseY < app.height):
+            app.notetakingMode = not app.notetakingMode
+            #temp measure until right click is supported
 
 def level_onMouseMove(app, mouseX, mouseY):
-    selectedCell = app.board.getCell(mouseX, mouseY)
-    if (app.board.selection != None and 
-        selectedCell == app.board.selection and
-        not app.state.isEntryFixed(*app.board.selection)):
-        selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
-        if selectedNumPadButton != None:
-            app.board.numPadSelection = selectedNumPadButton
-    else:
-        app.board.numPadSelection = None
+    if not app.state.gameOver:
+        selectedCell = app.board.getCell(mouseX, mouseY)
+        if (app.board.selection != None and 
+            selectedCell == app.board.selection and
+            not app.state.isEntryFixed(*app.board.selection)):
+            selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
+            if selectedNumPadButton != None:
+                app.board.numPadSelection = selectedNumPadButton
+        else:
+            app.board.numPadSelection = None
 
 def level_onMouseRelease(app,mouseX,mouseY):
     for button in app.level_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
 def level_onKeyPress(app, key):
-    if key in {'0','1','2','3','4','5','6','7','8','9'}:
-        if (app.board.selection != None and
-            not app.state.isEntryFixed(*app.board.selection)):
-            app.state.setEntry(*app.board.selection, int(key))
-    elif key == 'escape':
-        app.board.selection = None
-        setActiveScreen('start')
-    #move to next non-empty cell
-    elif key == 'w': #up
-        moveSelection(app,-1,0,'mode1')
-    elif key == 's': #down
-        moveSelection(app,1,0,'mode1')
-    elif key == 'a': #left
-        moveSelection(app,0,-1,'mode1')
-    elif key == 'd': #right
-        moveSelection(app,0,1,'mode1')
-    #move to next cell
-    elif key == 'W': #shift-up
-        moveSelection(app,-1,0,'mode2')
-    elif key == 'S': #shift-down
-        moveSelection(app,1,0,'mode2')
-    elif key == 'A': #shift-left
-        moveSelection(app,0,-1,'mode2')
-    elif key == 'D': #shift-right
-        moveSelection(app,0,1,'mode2')
+    if not app.state.gameOver:
+        if key in {'0','1','2','3','4','5','6','7','8','9'}:
+            if (app.board.selection != None and
+                not app.state.isEntryFixed(*app.board.selection)):
+                app.state.setEntry(app,*app.board.selection, int(key))
+        elif key in {'!','@','#','$','%','^','&','*','('}:
+            row, col = app.board.selection[0], app.board.selection[1]
+            if app.state.entries[row][col] == 0:
+                value = app.symbToNum[key]
+                if value not in app.state.legals[row][col]:
+                    app.state.addLegal(row, col, value)
+                else:
+                    app.state.removeLegal(row, col, value)
+        
+        elif key == 'n' and app.level != 0:
+            singleton = app.state.getSingleton()
+            if singleton == None:
+                pass
+                app.message = 'no singletons left'
+            else:
+                row,col,value = singleton
+                app.state.setEntry(app,row,col,value)
+
+        #move to next non-empty cell
+        elif key == 'w': #up
+            moveSelection(app,-1,0,'mode1')
+        elif key == 's': #down
+            moveSelection(app,1,0,'mode1')
+        elif key == 'a': #left
+            moveSelection(app,0,-1,'mode1')
+        elif key == 'd': #right
+            moveSelection(app,0,1,'mode1')
+
+        #move to next cell
+        elif key == 'W': #shift-up
+            moveSelection(app,-1,0,'mode2')
+        elif key == 'S': #shift-down
+            moveSelection(app,1,0,'mode2')
+        elif key == 'A': #shift-left
+            moveSelection(app,0,-1,'mode2')
+        elif key == 'D': #shift-right
+            moveSelection(app,0,1,'mode2')
 
 def moveSelection(app,drow,dcol,mode):
     if mode == 'mode1':
@@ -444,6 +411,6 @@ def findClosestEmptyCell(entries,row,col,drow,dcol):
     return (row,col)
 
 def main():
-    runAppWithScreens(initialScreen='start', width=450)
+    runAppWithScreens(initialScreen='start', width=450, height=425)
 
 main()

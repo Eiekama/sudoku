@@ -1,4 +1,4 @@
-from cmu_cs3_graphics import *
+from cmu_graphics import *
 import math
 
 class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events-python/
@@ -44,9 +44,6 @@ class Button:
         return (self.cx-0.5*self.width < x < self.cx+0.5*self.width and
                 self.cy-0.5*self.height < y < self.cy+0.5*self.height)
 
-class Message:
-    pass
-
 class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
              #         and https://cs3-112-f22.academy.cs.cmu.edu/notes/4189
     def __init__(self,left,top,width,height,
@@ -63,7 +60,7 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
                             'default': None,
                            'selected':'gold',
                               'wrong':'pink',
-                              'fixed':'whitesmoke',
+                              'fixed':'lightgrey',
                       'selectedFixed':'goldenrod',
                       'selectedWrong':'lightsalmon' }
 
