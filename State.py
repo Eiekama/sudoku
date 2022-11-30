@@ -24,6 +24,13 @@ class State:
         self.legals = [[set() for _ in range(self.cols)] for _ in range(self.rows)]
         if self.isLegalsAuto: self.updateAllLegals()
 
+        self.cellsWithWrongLegals = set()
+
+        self.undoList = []
+        self.redoList = []
+
+        self.selection = None
+
         self.gameOver = False
     
     @staticmethod
@@ -83,7 +90,31 @@ class State:
             board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
             return board
 
-    
+    ##################################
+    # Undo/Redo
+    ##################################
+
+    def undoMove(self,app):
+        if self.undoList != []:
+            self.redoList.append((self.selection,self.isLegalsAuto,
+                                  copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
+            self.selection,self.isLegalsAuto,self.entries,self.legals = self.undoList.pop()
+        else:
+            app.message = 'there are no moves to undo'
+
+    def redoMove(self,app):
+        if self.redoList != []:
+            self.undoList.append((self.selection,self.isLegalsAuto,
+                                  copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
+            self.selection,self.isLegalsAuto,self.entries,self.legals = self.redoList.pop()
+        else:
+            app.message = 'there are no moves to redo'
+
+    def updateUndoRedoLists(self):
+        self.undoList.append((self.selection,self.isLegalsAuto,
+                              copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
+        self.redoList = []
+
     ##################################
     # Legals-related functions
     ##################################
@@ -108,14 +139,22 @@ class State:
         return set(range(1,10))-seen
 
     def addLegal(self,row,col,n):
+        self.updateUndoRedoLists()
         self.legals[row][col].add(n)
+        if n == self.solution[row][col] and (row,col) in self.cellsWithWrongLegals:
+            self.cellsWithWrongLegals.remove((row,col))
     
     def removeLegal(self,row,col,n):
         if n in self.legals[row][col]:
+            self.updateUndoRedoLists()
             self.legals[row][col].remove(n)
+            if n == self.solution[row][col]:
+                self.cellsWithWrongLegals.add((row,col))
 
     def clearLegals(self,row,col):
         self.legals[row][col] = set()
+        if (row,col) in self.cellsWithWrongLegals:
+            self.cellsWithWrongLegals.remove((row,col))
     
     def getSingleton(self):
         for row in range(self.rows):
@@ -143,6 +182,8 @@ class State:
     #         for legal in self.legals[otherRow][otherCol]:
     #             seen.add(legal)
     #     return seen
+
+
     ##################################
     # Get Regions
     ##################################
@@ -187,6 +228,7 @@ class State:
 
     def setEntry(self,app,row,col,n):
         if not self.gameOver:
+            self.updateUndoRedoLists()
             self.entries[row][col] = n
             self.clearLegals(row,col)
             if self.isLegalsAuto: self.updateLegals(row,col)

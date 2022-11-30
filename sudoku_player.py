@@ -210,16 +210,16 @@ def manual_redrawAll(app):
 def manual_onMousePress(app, mouseX, mouseY):
     selectedCell = app.board.getCell(mouseX, mouseY)
     if selectedCell != None:
-        app.board.selection = selectedCell
+        app.state.selection = selectedCell
     
-    if app.board.selection != None and app.board.numPadSelection != None:
-        row,col = app.board.selection[0],app.board.selection[1]
+    if app.state.selection != None and app.board.numPadSelection != None:
+        row,col = app.state.selection[0],app.state.selection[1]
         app.board.entries[row][col] = app.board.numPadSelection
 
 def manual_onMouseMove(app, mouseX, mouseY):
     selectedCell = app.board.getCell(mouseX, mouseY)
-    if (app.board.selection != None and 
-        selectedCell == app.board.selection):
+    if (app.state.selection != None and 
+        selectedCell == app.state.selection):
         selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
         if selectedNumPadButton != None:
             app.board.numPadSelection = selectedNumPadButton
@@ -253,10 +253,23 @@ def level_onScreenStart(app):
             app.width-35,y+300,0.6),
     ]
     app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
+    app.level_buttons[-3].AddListener(undo(app))
+    app.level_buttons[-2].AddListener(redo(app))
     app.level_buttons[-1].AddListener(toggleAutoLegals(app))
+
+def undo(app):
+    def f():
+        app.state.undoMove(app)
+    return f
+    
+def redo(app):
+    def f():
+        app.state.redoMove(app)
+    return f
 
 def toggleAutoLegals(app):
     def f():
+        app.state.updateUndoRedoLists()
         app.state.isLegalsAuto = not app.state.isLegalsAuto
         if app.state.isLegalsAuto: app.state.updateAllLegals()
     return f
@@ -273,13 +286,13 @@ def level_onMousePress(app, mouseX, mouseY):
     if not app.state.gameOver:
         selectedCell = app.board.getCell(mouseX, mouseY)
         if selectedCell != None:
-            app.board.selection = selectedCell
+            app.state.selection = selectedCell
         
-        if app.board.selection != None and app.board.numPadSelection != None:
+        if app.state.selection != None and app.board.numPadSelection != None:
             if not app.notetakingMode:
-                app.state.setEntry(app,*app.board.selection, app.board.numPadSelection)
+                app.state.setEntry(app,*app.state.selection, app.board.numPadSelection)
             else:
-                row, col = app.board.selection[0], app.board.selection[1]
+                row, col = app.state.selection[0], app.state.selection[1]
                 if app.state.entries[row][col] == 0:
                     if app.board.numPadSelection not in app.state.legals[row][col]:
                         app.state.addLegal(row, col, app.board.numPadSelection)
@@ -293,9 +306,9 @@ def level_onMousePress(app, mouseX, mouseY):
 def level_onMouseMove(app, mouseX, mouseY):
     if not app.state.gameOver:
         selectedCell = app.board.getCell(mouseX, mouseY)
-        if (app.board.selection != None and 
-            selectedCell == app.board.selection and
-            not app.state.isEntryFixed(*app.board.selection)):
+        if (app.state.selection != None and 
+            selectedCell == app.state.selection and
+            not app.state.isEntryFixed(*app.state.selection)):
             selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
             if selectedNumPadButton != None:
                 app.board.numPadSelection = selectedNumPadButton
@@ -309,11 +322,11 @@ def level_onMouseRelease(app,mouseX,mouseY):
 def level_onKeyPress(app, key):
     if not app.state.gameOver:
         if key in {'0','1','2','3','4','5','6','7','8','9'}:
-            if (app.board.selection != None and
-                not app.state.isEntryFixed(*app.board.selection)):
-                app.state.setEntry(app,*app.board.selection, int(key))
+            if (app.state.selection != None and
+                not app.state.isEntryFixed(*app.state.selection)):
+                app.state.setEntry(app,*app.state.selection, int(key))
         elif key in {'!','@','#','$','%','^','&','*','('}:
-            row, col = app.board.selection[0], app.board.selection[1]
+            row, col = app.state.selection[0], app.state.selection[1]
             if app.state.entries[row][col] == 0:
                 value = app.symbToNum[key]
                 if value not in app.state.legals[row][col]:
@@ -352,22 +365,22 @@ def level_onKeyPress(app, key):
 
 def moveSelection(app,drow,dcol,mode):
     if mode == 'mode1':
-        if app.board.selection == None:
-            app.board.selection = findClosestEmptyCell(app.state.entries,-1,-1,abs(drow),abs(dcol))
+        if app.state.selection == None:
+            app.state.selection = findClosestEmptyCell(app.state.entries,-1,-1,abs(drow),abs(dcol))
         else:
-            app.board.selection = findClosestEmptyCell(app.state.entries,*app.board.selection,drow,dcol)
+            app.state.selection = findClosestEmptyCell(app.state.entries,*app.state.selection,drow,dcol)
     elif mode == 'mode2':
-        if app.board.selection == None:
-            app.board.selection = 0,0
+        if app.state.selection == None:
+            app.state.selection = 0,0
         else:
-            row,col = app.board.selection
+            row,col = app.state.selection
             row += drow
             col += dcol
             if (row<0 or row>=app.board.rows):
                 row -= drow
             if (col<0 or col>=app.board.cols):
                 col -= dcol
-            app.board.selection = row, col
+            app.state.selection = row, col
         
 
 def findClosestEmptyCell(entries,row,col,drow,dcol):

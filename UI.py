@@ -51,7 +51,6 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
         self.left,self.top,self.width,self.height = left,top,width,height
         self.rows,self.cols,self.cellBorderWidth = rows,cols,cellBorderWidth
         self.entries = [[0 for _ in range(rows)] for _ in range(cols)]
-        self.selection = None
         self.numPadSelection = None
         self.colors = {  'darkBorder':'black',
                        'mediumBorder':'grey',
@@ -77,7 +76,7 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
         #draws cell background
         bgColor = 'default'
         labelColor = 'darkBorder'
-        if (row,col) == self.selection:
+        if (row,col) == self.state.selection:
             bgColor = 'selected'
             labelColor = 'inverseDark'
         drawRect(cellLeft, cellTop, cellWidth, cellHeight,
@@ -97,12 +96,12 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
             x = cellLeft + self.cellBorderWidth + (i%3)*cellWidth
             y = cellTop + self.cellBorderWidth + (i//3)*cellHeight
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
-            if (row,col) == self.selection and i+1 == self.numPadSelection:
+            if (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
                             fill=self.colors['lightBorder'], align='center')
 
     def getNumPadButton(self,x,y):
-        cellLeft, cellTop = self.getCellLeftTop(*self.selection)
+        cellLeft, cellTop = self.getCellLeftTop(*self.state.selection)
         cellWidth, cellHeight = self.getCellSize()
 
         dx, dy = x-cellLeft, y-cellTop
@@ -172,15 +171,15 @@ class SudokuBoard(Board):
         #draws cell background
         bgColor = 'default'
         labelColor = 'darkBorder'
-        if (row,col) == self.selection:
+        if (row,col) == self.state.selection:
             if self.state.isEntryFixed(row,col):
                 bgColor = 'selectedFixed'
-            elif self.state.isEntryWrong(row,col):
+            elif self.state.isEntryWrong(row,col) or (row,col) in self.state.cellsWithWrongLegals:
                 bgColor = 'selectedWrong'
             else:
                 bgColor = 'selected'
             labelColor = 'inverseDark'
-        elif self.state.isEntryWrong(row,col):
+        elif self.state.isEntryWrong(row,col) or (row,col) in self.state.cellsWithWrongLegals:
             bgColor = 'wrong'
         elif self.state.isEntryFixed(row,col):
             bgColor = 'fixed'
@@ -204,6 +203,6 @@ class SudokuBoard(Board):
             if i+1 in self.state.legals[row][col]:
                 drawLabel(i+1, cx, cy,
                             fill=self.colors['mediumBorder'], align='center')
-            elif (row,col) == self.selection and i+1 == self.numPadSelection:
+            elif (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
                             fill=self.colors['lightBorder'], align='center')
