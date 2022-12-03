@@ -240,22 +240,38 @@ def level_onScreenStart(app):
     y = 48
     app.level_buttons = [
         Button(CMUImage(PILImage.open('assets/home_button.png')),
-            app.width-35,y,0.6),
-            Button(CMUImage(PILImage.open('assets/help_button_small.png')),
-            app.width-35,y+60,0.6),
-            Button(CMUImage(PILImage.open('assets/hint_button.png')),
-            app.width-35,y+120,0.6),
-            Button(CMUImage(PILImage.open('assets/undo_button.png')),
-            app.width-35,y+180,0.6),
-            Button(CMUImage(PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT)),
-            app.width-35,y+240,0.6),
-            Button(CMUImage(PILImage.open('assets/notes_button.png')),
-            app.width-35,y+300,0.6),
+               app.width-35,y,0.6),
+        Button(CMUImage(PILImage.open('assets/help_button_small.png')),
+               app.width-35,y+60,0.6),
+        Button(CMUImage(PILImage.open('assets/hint_button.png')),
+               app.width-35,y+120,0.6),
+        Button(CMUImage(PILImage.open('assets/undo_button.png')),
+               app.width-35,y+180,0.6),
+        Button(CMUImage(PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT)),
+               app.width-35,y+240,0.6),
+        Button(CMUImage(PILImage.open('assets/notes_button.png')),
+               app.width-35,y+300,0.6),
     ]
     app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
+    app.level_buttons[2].AddListener(getHint(app))
     app.level_buttons[-3].AddListener(undo(app))
     app.level_buttons[-2].AddListener(redo(app))
     app.level_buttons[-1].AddListener(toggleAutoLegals(app))
+
+def getHint(app):
+    def f():
+        if app.state.hints != ((),()):
+            for move in app.state.hints[1]:
+                app.state.doMove(app,move)
+        else:
+            print('getting hint 1')
+            app.state.getLevel1Hint()
+            if app.state.hints == ((),()):
+                print('failed hint 1, getting hint 2')
+                app.state.getLevel2Hint()
+                if app.state.hints == ((),()):
+                    print('no hints left')
+    return f
 
 def undo(app):
     def f():

@@ -60,8 +60,10 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
                            'selected':'gold',
                               'wrong':'pink',
                               'fixed':'lightgrey',
+                               'hint':'lavender',
                       'selectedFixed':'goldenrod',
-                      'selectedWrong':'lightsalmon' }
+                      'selectedWrong':'lightsalmon',
+                       'selectedHint':'mediumpurple' }
 
     def drawBoard(self):
         for row in range(self.rows):
@@ -176,6 +178,8 @@ class SudokuBoard(Board):
                 bgColor = 'selectedFixed'
             elif self.state.isEntryWrong(row,col) or (row,col) in self.state.cellsWithWrongLegals:
                 bgColor = 'selectedWrong'
+            elif (row,col) in self.state.hints[0]:
+                bgColor = 'selectedHint'
             else:
                 bgColor = 'selected'
             labelColor = 'inverseDark'
@@ -183,6 +187,8 @@ class SudokuBoard(Board):
             bgColor = 'wrong'
         elif self.state.isEntryFixed(row,col):
             bgColor = 'fixed'
+        elif (row,col) in self.state.hints[0]:
+                bgColor = 'hint'
         drawRect(cellLeft, cellTop, cellWidth, cellHeight,
                  fill=self.colors[bgColor], border=self.colors['mediumBorder'],
                  borderWidth=self.cellBorderWidth)

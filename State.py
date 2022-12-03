@@ -1,4 +1,4 @@
-import os, random, copy
+import os, random, copy, itertools
 import sudoku_solver
 
 class State:
@@ -28,6 +28,8 @@ class State:
 
         self.undoList = []
         self.redoList = []
+
+        self.hints = ((),())
 
         self.selection = None
 
@@ -81,14 +83,26 @@ class State:
             return f.read()
     
     def getBoard(self):
-        if self.type == 5:
-            assert(self.manualBoard != None)
-            return self.manualBoard
-        else:
-            filePath = random.choice(State.builtinBoards[self.type])
-            fileContents = State.readFile(filePath)
-            board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
-            return board
+        contents = '''\
+0 4 2 0 0 6 0 0 3
+0 0 0 0 0 2 0 0 0
+0 0 0 0 8 0 0 2 6
+0 7 0 2 0 0 0 8 0
+0 0 5 9 7 0 1 0 2
+3 2 0 6 0 8 4 0 0
+0 0 8 5 0 0 0 0 0
+0 0 4 8 0 1 0 0 0
+2 3 6 0 0 0 0 0 0'''
+        board = [[int(v) for v in line.split(' ')] for line in contents.splitlines()]
+        return board
+        # if self.type == 5:
+        #     assert(self.manualBoard != None)
+        #     return self.manualBoard
+        # else:
+        #     filePath = random.choice(State.builtinBoards[self.type])
+        #     fileContents = State.readFile(filePath)
+        #     board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
+        #     return board
 
     ##################################
     # Undo/Redo
@@ -114,6 +128,72 @@ class State:
         self.undoList.append((self.selection,self.isLegalsAuto,
                               copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
         self.redoList = []
+
+
+    ##################################
+    # Hints
+    ##################################
+
+    def getLevel1Hint(self):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                legals = self.legals[row][col]
+                if len(legals) == 1: 
+                    self.hints = (((row,col),),(('set',row,col,list(legals)[0]),))
+                    return
+                for legal in legals:
+                    if self.isSingle(row,col,legal):
+                        self.hints = (((row,col),),(('set',row,col,legal),))
+        return
+
+    def isSingle(self,row,col,legal):
+        for region in [self.getRowCells(row),self.getColCells(col),self.getBlockCells(row,col)]:
+            if legal not in self.getLegalsInRegion(region,row,col): return True
+        return False
+
+    def getLegalsInRegion(self,region,row,col):
+        seen = set()
+        for otherRow,otherCol in region:
+            if (otherRow,otherCol) == (row,col): continue
+            for legal in self.legals[otherRow][otherCol]:
+                seen.add(legal)
+        return seen
+
+    def getLevel2Hint(self):
+        for region in self.getAllRegions():
+            for i in range(2,6):
+                for legals in itertools.combinations(range(1,10),i):
+                    cells = self.getCellsContainingOnlyTargets(region,legals)
+                    if len(cells) == i:
+                        #found tuple, so check if leads to banning of legals
+                        moves = []
+                        for row,col in set(region)-cells:
+                            legalsToBan = set()
+                            for legal in legals:
+                                if legal in self.legals[row][col]:
+                                    legalsToBan.add(legal)
+                            if legalsToBan != set():
+                                moves.append(('ban',row,col,legalsToBan))
+                        if moves != []:
+                            self.hints = (cells,moves)
+        return
+
+    def doMove(self,app,move):
+        print(move)
+        row,col = move[1],move[2]
+        if move[0] == 'set':
+            self.setEntry(app,row,col,move[-1])
+        elif move[0] == 'ban':
+            for legal in move[-1]:
+                self.removeLegal(row,col,legal)
+
+    def getCellsContainingOnlyTargets(self,region,targets):
+        result = set()
+        for row,col in region:
+            if (self.legals[row][col] != set() and 
+                self.legals[row][col]-set(targets) == set()):
+                result.add((row,col))
+        return result
 
     ##################################
     # Legals-related functions
@@ -141,6 +221,7 @@ class State:
     def addLegal(self,row,col,n):
         self.updateUndoRedoLists()
         self.legals[row][col].add(n)
+        self.hints = ((),())
         if n == self.solution[row][col] and (row,col) in self.cellsWithWrongLegals:
             self.cellsWithWrongLegals.remove((row,col))
     
@@ -148,6 +229,7 @@ class State:
         if n in self.legals[row][col]:
             self.updateUndoRedoLists()
             self.legals[row][col].remove(n)
+            self.hints = ((),())
             if n == self.solution[row][col]:
                 self.cellsWithWrongLegals.add((row,col))
 
@@ -162,26 +244,6 @@ class State:
                 if len(self.legals[row][col]) == 1:
                     return row,col,list(self.legals[row][col])[0]
         return None
-
-    # def getSingleton(self):
-    #     for row in range(self.rows):
-    #         for col in range(self.cols):
-    #             for legal in self.legals[row][col]:
-    #                 if self.isSingleton(row,col,legal): return (row,col,legal)
-    #     return None
-
-    # def isSingleton(self,row,col,legal):
-    #     for region in [self.getRowCells(row),self.getColCells(col),self.getBlockCells(row,col)]:
-    #         if legal not in self.getLegalsInRegion(region,row,col): return True
-    #     return False
-
-    # def getLegalsInRegion(self,region,row,col):
-    #     seen = set()
-    #     for otherRow,otherCol in region:
-    #         if (otherRow,otherCol) == (row,col): continue
-    #         for legal in self.legals[otherRow][otherCol]:
-    #             seen.add(legal)
-    #     return seen
 
 
     ##################################
@@ -205,11 +267,11 @@ class State:
     
     @staticmethod
     def getRowCells(row):
-        return [(row,i) for i in range(9)]
+        return ((row,i) for i in range(9))
 
     @staticmethod
     def getColCells(col):
-        return [(i,col) for i in range(9)]
+        return ((i,col) for i in range(9))
     
     @staticmethod
     def getBlockCells(i,j=None):
@@ -220,6 +282,15 @@ class State:
         for i in range(topRow,topRow+3):
             for j in range(leftCol,leftCol+3):
                 result.append((i,j))
+        return tuple(result)
+
+    @staticmethod
+    def getAllRegions():
+        result = set()
+        for i in range(9):
+            result.add(State.getRowCells(i))
+            result.add(State.getColCells(i))
+            result.add(State.getBlockCells(i))
         return result
 
     ##################################
@@ -231,6 +302,7 @@ class State:
             self.updateUndoRedoLists()
             self.entries[row][col] = n
             self.clearLegals(row,col)
+            self.hints = ((),())
             if self.isLegalsAuto: self.updateLegals(row,col)
             if self.entries == self.solution:
                 app.message = 'you win!'
