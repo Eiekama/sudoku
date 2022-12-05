@@ -110,22 +110,22 @@ class State:
 
     def undoMove(self,app):
         if self.undoList != []:
-            self.redoList.append((self.selection,self.isLegalsAuto,
+            self.redoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                                   copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
-            self.selection,self.isLegalsAuto,self.entries,self.legals = self.undoList.pop()
+            self.selection,self.isLegalsAuto,self.cellsWithWrongLegals,self.entries,self.legals = self.undoList.pop()
         else:
             app.message = 'there are no moves to undo'
 
     def redoMove(self,app):
         if self.redoList != []:
-            self.undoList.append((self.selection,self.isLegalsAuto,
+            self.undoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                                   copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
-            self.selection,self.isLegalsAuto,self.entries,self.legals = self.redoList.pop()
+            self.selection,self.isLegalsAuto,self.cellsWithWrongLegals,self.entries,self.legals = self.redoList.pop()
         else:
             app.message = 'there are no moves to redo'
 
     def updateUndoRedoLists(self):
-        self.undoList.append((self.selection,self.isLegalsAuto,
+        self.undoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                               copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
         self.redoList = []
 
@@ -179,7 +179,6 @@ class State:
         return
 
     def doMove(self,app,move):
-        print(move)
         row,col = move[1],move[2]
         if move[0] == 'set':
             self.setEntry(app,row,col,move[-1])

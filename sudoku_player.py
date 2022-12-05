@@ -17,11 +17,11 @@ def start_onScreenStart(app):
     app.symbToNum = {'!':1,'@':2,'#':3,'$':4,'%':5,'^':6,'&':7,'*':8,'(':9,}
 
     app.start_buttons = [
-        Button(CMUImage(PILImage.open('assets/play_button.png')),
+        Button(PILImage.open('assets/play_button.png'),
                app.width//2-40,app.height//2+50,.6),
-        Button(CMUImage(PILImage.open('assets/help_button.png')),
+        Button(PILImage.open('assets/help_button.png'),
                app.width//2+95,app.height//2+90,.3),
-        Button(CMUImage(PILImage.open('assets/settings_button.png')),
+        Button(PILImage.open('assets/settings_button.png'),
                app.width//2+95,app.height//2+15,.3),
     ]
     app.start_buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
@@ -45,7 +45,7 @@ def start_onMouseRelease(app,mouseX,mouseY):
 
 def help_onScreenStart(app):
     app.help_buttons = [
-        Button(CMUImage(PILImage.open('assets/back_button.png')),
+        Button(PILImage.open('assets/back_button.png'),
         app.width-35,37,0.25),
     ]
     app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
@@ -72,13 +72,13 @@ def help_onMouseRelease(app,mouseX,mouseY):
 def levelSelect_onScreenStart(app):
     app.level = 0
     app.levelSelect_buttons = [
-        Button(CMUImage(PILImage.open('assets/arrow_button.png').transpose(PILImage.FLIP_LEFT_RIGHT)),
+        Button(PILImage.open('assets/arrow_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
                app.width//2-135,app.height//2-50,.3),
-        Button(CMUImage(PILImage.open('assets/arrow_button.png')),
+        Button(PILImage.open('assets/arrow_button.png'),
                app.width//2+135,app.height//2-50,.3),
-        Button(CMUImage(PILImage.open('assets/play_button.png')),
+        Button(PILImage.open('assets/play_button.png'),
                app.width//2,app.height//2+100,.6),
-        Button(CMUImage(PILImage.open('assets/back_button.png')),
+        Button(PILImage.open('assets/back_button.png'),
             app.width-35,37,0.25),
     ]
     app.levelSelect_buttons[0].AddListener(changeLevel(app,-1))
@@ -131,11 +131,11 @@ def levelSelect_onMouseRelease(app,mouseX,mouseY):
 
 def manualSelect_onScreenStart(app):
     app.manualSelect_buttons = [
-        Button(CMUImage(PILImage.open('assets/arrow_button.png')),
+        Button(PILImage.open('assets/arrow_button.png'),
                app.width//2+135,app.height//2-50,.3),
-        Button(CMUImage(PILImage.open('assets/arrow_button.png')),
+        Button(PILImage.open('assets/arrow_button.png'),
                app.width//2+135,app.height//2+50,.3),
-        Button(CMUImage(PILImage.open('assets/back_button.png')),
+        Button(PILImage.open('assets/back_button.png'),
         app.width-35,37,0.25),
     ]
     app.manualSelect_buttons[0].AddListener(getBoardFromInput(app))
@@ -184,9 +184,9 @@ def manualSelect_onMouseRelease(app,mouseX,mouseY):
 
 def manual_onScreenStart(app):
     app.manual_buttons = [
-        Button(CMUImage(PILImage.open('assets/play_button.png')),
+        Button(PILImage.open('assets/play_button.png'),
             app.width+20,app.height-100,.6),
-        Button(CMUImage(PILImage.open('assets/back_button.png')),
+        Button(PILImage.open('assets/back_button.png'),
         app.width-35,37,0.25),
     ]
     app.manual_buttons[0].AddListener(makeLevel(app))
@@ -239,17 +239,17 @@ def manual_onMouseRelease(app,mouseX,mouseY):
 def level_onScreenStart(app):
     y = 48
     app.level_buttons = [
-        Button(CMUImage(PILImage.open('assets/home_button.png')),
+        Button(PILImage.open('assets/home_button.png'),
                app.width-35,y,0.6),
-        Button(CMUImage(PILImage.open('assets/help_button_small.png')),
+        Button(PILImage.open('assets/help_button_small.png'),
                app.width-35,y+60,0.6),
-        Button(CMUImage(PILImage.open('assets/hint_button.png')),
+        Button(PILImage.open('assets/hint_button.png'),
                app.width-35,y+120,0.6),
-        Button(CMUImage(PILImage.open('assets/undo_button.png')),
+        Button(PILImage.open('assets/undo_button.png'),
                app.width-35,y+180,0.6),
-        Button(CMUImage(PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT)),
+        Button(PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
                app.width-35,y+240,0.6),
-        Button(CMUImage(PILImage.open('assets/notes_button.png')),
+        Button(PILImage.open('assets/notes_button.png'),
                app.width-35,y+300,0.6),
     ]
     app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
@@ -264,10 +264,8 @@ def getHint(app):
             for move in app.state.hints[1]:
                 app.state.doMove(app,move)
         else:
-            print('getting hint 1')
             app.state.getLevel1Hint()
             if app.state.hints == ((),()):
-                print('failed hint 1, getting hint 2')
                 app.state.getLevel2Hint()
                 if app.state.hints == ((),()):
                     print('no hints left')
@@ -358,6 +356,9 @@ def level_onKeyPress(app, key):
             else:
                 row,col,value = singleton
                 app.state.setEntry(app,row,col,value)
+
+        elif key == 'h':
+            getHint(app)()
 
         #move to next non-empty cell
         elif key == 'w': #up

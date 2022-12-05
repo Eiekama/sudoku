@@ -1,4 +1,5 @@
 from cmu_graphics import *
+from PIL import Image as PILImage
 import math
 
 class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events-python/
@@ -19,15 +20,61 @@ class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events
             eventhandler(*args, **keywargs)
 
 class Button:
-    def __init__(self,image,cx,cy,scale=None):
-        self.image = image
+    colors = {  'darkest':(105, 109, 125),
+             'mediumdark':(104, 176, 171),
+               'lightest': (250, 243, 221),
+                 'medium':(143, 192, 169),
+                  'wrong':'pink',
+            'mediumlight':(200, 213, 185),
+                   'hint':'lavender',}
+
+    sourceImages = {'play' : PILImage.open('assets/play_button.png'),
+                    'help' : PILImage.open('assets/help_button.png'),
+                'settings' : PILImage.open('assets/settings_button.png'),
+               'leftarrow' : PILImage.open('assets/arrow_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
+              'rightarrow' : PILImage.open('assets/arrow_button.png'),
+                    'back' : PILImage.open('assets/back_button.png'),
+                    'home' : PILImage.open('assets/home_button.png'),
+               'helpsmall' : PILImage.open('assets/help_button_small.png'),
+                    'hint' : PILImage.open('assets/hint_button.png'),
+                    'undo' : PILImage.open('assets/undo_button.png'),
+                    'redo' : PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
+                   'notes' : PILImage.open('assets/notes_button.png'),}
+
+    @staticmethod
+    def makeColorImage(sourceImage):
+        rgbImage = sourceImage.convert('RGBA')
+
+        newImage = PILImage.new(mode='RGBA', size=rgbImage.size)
+        for x in range(newImage.width):
+            for y in range(newImage.height):
+                r,g,b,a = rgbImage.getpixel((x,y))
+                if a == 0:
+                    color = (0,0,0,0)
+                else:
+                    if r == 0:
+                        color = Button.colors['darkest'] + (255,)
+                    elif r == 51:
+                        color = Button.colors['mediumdark'] + (255,)
+                    elif r == 102:
+                        color = Button.colors['medium'] + (255,)
+                    elif r == 153:
+                        color = Button.colors['mediumlight'] + (255,)
+                    elif r == 204:
+                        color = Button.colors['lightest'] + (255,)
+                newImage.putpixel((x,y),color)
+        return newImage
+
+    def __init__(self,sourceImage,cx,cy,scale=None):
+        self.images = [CMUImage(Button.makeColorImage(sourceImage))]
+        self.image = self.images[0]
         self.cx, self.cy = cx, cy
         if scale == None:
-            self.width = image.image.width
-            self.height = image.image.height
+            self.width = self.image.image.width
+            self.height = self.image.image.height
         else:
-            self.width = image.image.width * scale
-            self.height = image.image.height * scale
+            self.width = self.image.image.width * scale
+            self.height = self.image.image.height * scale
         self.onClicked = Event()
 
     def AddListener(self,method):
