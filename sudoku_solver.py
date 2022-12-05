@@ -21,16 +21,10 @@ def getLegalsForCell(board,row,col):
 
 def getRegionCells(row,col):
     cells = set()
-    blockIndex = 3 * (row // 3) + col // 3
-    blockTop = 3 * (blockIndex // 3)
-    blockLeft = 3 * (blockIndex % 3)
-    for i in range(9):
-        cells.add((i,col))
-    for j in range(9):
-        cells.add((row,j))
-    for i in range(blockTop,blockTop+3):
-        for j in range(blockLeft,blockLeft+3):
-            cells.add((i,j))
+    for cell in rowCells[row]: cells.add(cell)
+    for cell in colCells[col]: cells.add(cell)
+    index = getBlockIndex(row,col)
+    for cell in blockCells[index]: cells.add(cell)
     return cells
 
 def solve(board,legals): #this could probably be improved if we apply hints to reduce legals before testing values
