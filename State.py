@@ -98,7 +98,7 @@ class State:
 
     def undoMove(self,app):
         if self.undoList != []:
-            app.message = ''
+            app.message = 'undid a move'
             self.redoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                                   copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
             self.selection,self.isLegalsAuto,self.cellsWithWrongLegals,self.entries,self.legals = self.undoList.pop()
@@ -107,7 +107,7 @@ class State:
 
     def redoMove(self,app):
         if self.redoList != []:
-            app.message = ''
+            app.message = 'redid a move'
             self.undoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                                   copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
             self.selection,self.isLegalsAuto,self.cellsWithWrongLegals,self.entries,self.legals = self.redoList.pop()
@@ -174,7 +174,7 @@ class State:
             self.setEntry(app,row,col,move[-1])
         elif move[0] == 'ban':
             for legal in move[-1]:
-                self.removeLegal(row,col,legal)
+                self.removeLegal(app,row,col,legal)
 
     def getCellsContainingOnlyTargets(self,region,targets):
         result = set()
@@ -207,17 +207,19 @@ class State:
             seen.add(self.entries[i][j])
         return set(range(1,10))-seen
 
-    def addLegal(self,row,col,n):
+    def addLegal(self,app,row,col,n):
         self.updateUndoRedoLists()
         self.legals[row][col].add(n)
+        app.message = f'{n} added to legals of ({row},{col})'
         self.hints = ((),())
         if n == self.solution[row][col] and (row,col) in self.cellsWithWrongLegals:
             self.cellsWithWrongLegals.remove((row,col))
     
-    def removeLegal(self,row,col,n):
+    def removeLegal(self,app,row,col,n):
         if n in self.legals[row][col]:
             self.updateUndoRedoLists()
             self.legals[row][col].remove(n)
+            app.message = f'{n} removed from legals of ({row},{col})'
             self.hints = ((),())
             if n == self.solution[row][col]:
                 self.cellsWithWrongLegals.add((row,col))
@@ -290,6 +292,7 @@ class State:
         if not self.gameOver:
             self.updateUndoRedoLists()
             self.entries[row][col] = n
+            app.message = f'({row},{col}) set to {n}'
             self.clearLegals(row,col)
             self.hints = ((),())
             if self.isLegalsAuto: self.updateLegals(row,col)

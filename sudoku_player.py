@@ -418,6 +418,7 @@ def level_onScreenStart(app):
 
 def getHint(app):
     def f():
+        app.message = 'asked for a hint'
         if app.state.hints != ((),()):
             for move in app.state.hints[1]:
                 app.state.doMove(app,move)
@@ -426,7 +427,7 @@ def getHint(app):
             if app.state.hints == ((),()):
                 app.state.getLevel2Hint()
                 if app.state.hints == ((),()):
-                    print('no hints left')
+                    app.message = 'board too difficult for hint'
     return f
 
 def undo(app):
@@ -443,7 +444,7 @@ def toggleAutoLegals(app):
     def f():
         app.state.updateUndoRedoLists()
         app.state.isLegalsAuto = not app.state.isLegalsAuto
-        app.level_buttons[-1].toggle()
+        app.level_buttons[-1].toggle(app)
         if app.state.isLegalsAuto: app.state.updateAllLegals()
     return f
     
@@ -469,9 +470,9 @@ def level_onMousePress(app, mouseX, mouseY):
                 row, col = app.state.selection[0], app.state.selection[1]
                 if app.state.entries[row][col] == 0:
                     if app.board.numPadSelection not in app.state.legals[row][col]:
-                        app.state.addLegal(row, col, app.board.numPadSelection)
+                        app.state.addLegal(app,row, col, app.board.numPadSelection)
                     else:
-                        app.state.removeLegal(row, col, app.board.numPadSelection)
+                        app.state.removeLegal(app,row, col, app.board.numPadSelection)
         
         if (app.width-50 < mouseX < app.width and app.height-50 < mouseY < app.height):
             app.notetakingMode = not app.notetakingMode
@@ -520,9 +521,9 @@ def level_onKeyPress(app, key):
             if app.state.entries[row][col] == 0:
                 value = app.symbToNum[key]
                 if value not in app.state.legals[row][col]:
-                    app.state.addLegal(row, col, value)
+                    app.state.addLegal(app,row, col, value)
                 else:
-                    app.state.removeLegal(row, col, value)
+                    app.state.removeLegal(app,row, col, value)
         
         elif key == 'n' and app.level != 0:
             singleton = app.state.getSingleton()

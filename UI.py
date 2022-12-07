@@ -156,10 +156,12 @@ class Toggle(Button):
         self.ownImages[-1],self.ownImages[0]=self.initialImages[0],self.initialImages[-1]
         self.image = self.ownImages[0]
     
-    def toggle(self):
+    def toggle(self,app):
         if self.isOn:
+            app.message = 'turn auto-legals mode off'
             self.setOff()
         else:
+            app.message = 'turn auto-legals mode on'
             self.setOn()
 
 class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
