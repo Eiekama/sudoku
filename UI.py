@@ -1,6 +1,7 @@
 from cmu_graphics import *
 from PIL import Image as PILImage
 import math
+from State import *
 
 class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events-python/
  
@@ -19,14 +20,18 @@ class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events
         for eventhandler in self.__eventhandlers:
             eventhandler(*args, **keywargs)
 
-class Button:
+class UI:
     colors = {  'darkest':(105, 109, 125),
              'mediumdark':(104, 176, 171),
-               'lightest': (250, 243, 221),
                  'medium':(143, 192, 169),
-                  'wrong':'pink',
             'mediumlight':(200, 213, 185),
-                   'hint':'lavender',}
+               'lightest':(250, 243, 221),
+                  'wrong':(254, 181,  92),
+                   'hint':(219, 178, 230),}
+    onColorChanged = Event()
+    onColorChanged += lambda:Button.updateImages()
+
+class Button:
 
     sourceImages = {'play' : PILImage.open('assets/play_button.png'),
                     'help' : PILImage.open('assets/help_button.png'),
@@ -41,8 +46,19 @@ class Button:
                     'redo' : PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
                    'notes' : PILImage.open('assets/notes_button.png'),}
 
+    images = dict()
+
     @staticmethod
-    def makeColorImage(sourceImage):
+    def makeColorCMUImage(sourceImage,offset=(0,0,0)):
+        def addOffset(tuple1,tuple2):
+            result = []
+            for i in range(len(tuple1)):
+                sum = tuple1[i]+tuple2[i]
+                if sum<0: sum = 1
+                elif sum>255: sum = 255
+                result.append(sum)
+            return tuple(result)
+        
         rgbImage = sourceImage.convert('RGBA')
 
         newImage = PILImage.new(mode='RGBA', size=rgbImage.size)
@@ -53,29 +69,49 @@ class Button:
                     color = (0,0,0,0)
                 else:
                     if r == 0:
-                        color = Button.colors['darkest'] + (255,)
+                        color = addOffset(UI.colors['darkest'],offset) + (255,)
                     elif r == 51:
-                        color = Button.colors['mediumdark'] + (255,)
+                        color = addOffset(UI.colors['mediumdark'],offset) + (255,)
                     elif r == 102:
-                        color = Button.colors['medium'] + (255,)
+                        color = addOffset(UI.colors['medium'],offset) + (255,)
                     elif r == 153:
-                        color = Button.colors['mediumlight'] + (255,)
+                        color = addOffset(UI.colors['mediumlight'],offset) + (255,)
                     elif r == 204:
-                        color = Button.colors['lightest'] + (255,)
+                        color = addOffset(UI.colors['lightest'],offset) + (255,)
                 newImage.putpixel((x,y),color)
-        return newImage
+        return CMUImage(newImage)
 
-    def __init__(self,sourceImage,cx,cy,scale=None):
-        self.images = [CMUImage(Button.makeColorImage(sourceImage))]
-        self.image = self.images[0]
+    @staticmethod
+    def updateImages():
+        for key in Button.sourceImages:
+            Button.images[key] = [Button.makeColorCMUImage(Button.sourceImages[key]),
+                                  Button.makeColorCMUImage(Button.sourceImages[key],offset=(20,20,20)),
+                                  Button.makeColorCMUImage(Button.sourceImages[key],offset=(40,40,40)),]
+
+    def __init__(self,imageName,cx,cy,scale=1):
+        if Button.images == dict(): Button.updateImages()
+        self.ownImages = Button.images[imageName]
+        self.image = self.ownImages[0]
+        UI.onColorChanged += lambda:self.getImages(imageName)
         self.cx, self.cy = cx, cy
-        if scale == None:
-            self.width = self.image.image.width
-            self.height = self.image.image.height
-        else:
-            self.width = self.image.image.width * scale
-            self.height = self.image.image.height * scale
+        self.width = self.ownImages[0].image.width * scale
+        self.height = self.ownImages[0].image.height * scale
         self.onClicked = Event()
+        self.onHover = Event()
+        self.onStartClick = Event()
+
+        self.onClicked += self.changeImage(0)
+        self.onHover += self.changeImage(1)
+        self.onStartClick += self.changeImage(2)
+
+    def getImages(self,imageName):
+        self.ownImages = Button.images[imageName]
+        self.image = self.ownImages[0]
+
+    def changeImage(self,index):
+        def f():
+            self.image = self.ownImages[index]
+        return f
 
     def AddListener(self,method):
         self.onClicked += method
@@ -93,24 +129,13 @@ class Button:
 
 class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
              #         and https://cs3-112-f22.academy.cs.cmu.edu/notes/4189
-    def __init__(self,left,top,width,height,
+    def __init__(self,state,left,top,width,height,
                  rows=9,cols=9,cellBorderWidth=1):
         self.left,self.top,self.width,self.height = left,top,width,height
         self.rows,self.cols,self.cellBorderWidth = rows,cols,cellBorderWidth
         self.entries = [[0 for _ in range(rows)] for _ in range(cols)]
         self.numPadSelection = None
-        self.colors = {  'darkBorder':'black',
-                       'mediumBorder':'grey',
-                        'lightBorder':'darkgrey',
-                        'inverseDark':'white',
-                            'default': None,
-                           'selected':'gold',
-                              'wrong':'pink',
-                              'fixed':'lightgrey',
-                               'hint':'lavender',
-                      'selectedFixed':'goldenrod',
-                      'selectedWrong':'lightsalmon',
-                       'selectedHint':'mediumpurple' }
+        self.state = state
 
     def drawBoard(self):
         for row in range(self.rows):
@@ -123,20 +148,20 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
         cellWidth, cellHeight = self.getCellSize()
 
         #draws cell background
-        bgColor = 'default'
-        labelColor = 'darkBorder'
+        bgColor = 'lightest'
+        labelColor = 'darkest'
         if (row,col) == self.state.selection:
-            bgColor = 'selected'
-            labelColor = 'inverseDark'
+            bgColor = 'medium'
+            labelColor = 'lightest'
         drawRect(cellLeft, cellTop, cellWidth, cellHeight,
-                 fill=self.colors[bgColor], border=self.colors['mediumBorder'],
+                 fill=rgb(*UI.colors[bgColor]), border=rgb(*UI.colors['mediumdark']),
                  borderWidth=self.cellBorderWidth)
 
         #draws number in cell, if applicable
         if self.entries[row][col] != 0:
             cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
             drawLabel(self.entries[row][col], cx, cy,
-                      size=25, fill=self.colors[labelColor])
+                      size=25, fill=rgb(*UI.colors[labelColor]))
         
         #draws numpad
         cellWidth = (cellWidth-2*self.cellBorderWidth)/3
@@ -147,7 +172,7 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
             if (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
-                            fill=self.colors['lightBorder'], align='center')
+                            fill=rgb(*UI.colors['mediumlight']), align='center')
 
     def getNumPadButton(self,x,y):
         cellLeft, cellTop = self.getCellLeftTop(*self.state.selection)
@@ -186,13 +211,13 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
             blockLeft, blockTop = self.getBlockLeftTop(i)
             cellWidth, cellHeight = self.getCellSize()
             drawRect(blockLeft, blockTop, 3*cellWidth, 3*cellHeight,
-                    fill=None, border=self.colors['darkBorder'],
+                    fill=None, border=rgb(*UI.colors['darkest']),
                     borderWidth=self.cellBorderWidth)
         
         borderWidth = 2*self.cellBorderWidth
         drawRect(self.left-borderWidth, self.top-borderWidth,
                     self.width+2*borderWidth, self.height+2*borderWidth,
-                    fill=None, border=self.colors['darkBorder'],
+                    fill=None, border=rgb(*UI.colors['darkest']),
                     borderWidth=borderWidth)
     
     def getCell(self, x, y):
@@ -210,43 +235,35 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
 
 class SudokuBoard(Board): 
     def __init__(self,state,left,top,width,height):
-        super().__init__(left,top,width,height)
-        self.state = state
+        super().__init__(state,left,top,width,height)
     
     def drawCell(self,row,col):
         cellLeft, cellTop = self.getCellLeftTop(row, col)
         cellWidth, cellHeight = self.getCellSize()
 
         #draws cell background
-        bgColor = 'default'
-        labelColor = 'darkBorder'
-        if (row,col) == self.state.selection:
-            if self.state.isEntryFixed(row,col):
-                bgColor = 'selectedFixed'
-            elif self.state.isEntryWrong(row,col) or (row,col) in self.state.cellsWithWrongLegals:
-                bgColor = 'selectedWrong'
-            elif (row,col) in self.state.hints[0]:
-                bgColor = 'selectedHint'
-            else:
-                bgColor = 'selected'
-            labelColor = 'inverseDark'
-        elif self.state.isEntryWrong(row,col) or (row,col) in self.state.cellsWithWrongLegals:
+        bgColor = 'lightest'
+        labelColor = 'darkest'
+        if self.state.isEntryWrong(row,col) or (row,col) in self.state.cellsWithWrongLegals:
             bgColor = 'wrong'
+        elif (row,col) == self.state.selection:
+            bgColor = 'medium'
+            labelColor = 'lightest'
         elif self.state.isEntryFixed(row,col):
-            bgColor = 'fixed'
+            bgColor = 'mediumlight'
         elif (row,col) in self.state.hints[0]:
                 bgColor = 'hint'
         drawRect(cellLeft, cellTop, cellWidth, cellHeight,
-                 fill=self.colors[bgColor], border=self.colors['mediumBorder'],
+                 fill=rgb(*UI.colors[bgColor]), border=rgb(*UI.colors['mediumdark']),
                  borderWidth=self.cellBorderWidth)
 
         #draws number in cell, if applicable
         if self.state.entries[row][col] != 0:
             cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
             drawLabel(self.state.entries[row][col], cx, cy,
-                      size=25, fill=self.colors[labelColor])
+                      size=25, fill=rgb(*UI.colors[labelColor]))
         
-        #draws legals (and numpad for selected cell)
+        #draws legals (and numpad for medium cell)
         cellWidth = (cellWidth-2*self.cellBorderWidth)/3
         cellHeight = (cellHeight-2*self.cellBorderWidth)/3
         for i in range(9):
@@ -255,7 +272,7 @@ class SudokuBoard(Board):
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
             if i+1 in self.state.legals[row][col]:
                 drawLabel(i+1, cx, cy,
-                            fill=self.colors['mediumBorder'], align='center')
+                            fill=rgb(*UI.colors['mediumdark']), align='center')
             elif (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
-                            fill=self.colors['lightBorder'], align='center')
+                          fill=rgb(*UI.colors['mediumlight']), align='center')

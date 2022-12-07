@@ -110,6 +110,7 @@ class State:
 
     def undoMove(self,app):
         if self.undoList != []:
+            app.message = ''
             self.redoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                                   copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
             self.selection,self.isLegalsAuto,self.cellsWithWrongLegals,self.entries,self.legals = self.undoList.pop()
@@ -118,6 +119,7 @@ class State:
 
     def redoMove(self,app):
         if self.redoList != []:
+            app.message = ''
             self.undoList.append((self.selection,self.isLegalsAuto,copy.deepcopy(self.cellsWithWrongLegals),
                                   copy.deepcopy(self.entries),copy.deepcopy(self.legals)))
             self.selection,self.isLegalsAuto,self.cellsWithWrongLegals,self.entries,self.legals = self.redoList.pop()

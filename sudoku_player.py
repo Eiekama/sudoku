@@ -17,24 +17,103 @@ def start_onScreenStart(app):
     app.symbToNum = {'!':1,'@':2,'#':3,'$':4,'%':5,'^':6,'&':7,'*':8,'(':9,}
 
     app.start_buttons = [
-        Button(PILImage.open('assets/play_button.png'),
+        Button('play',
                app.width//2-40,app.height//2+50,.6),
-        Button(PILImage.open('assets/help_button.png'),
+        Button('help',
                app.width//2+95,app.height//2+90,.3),
-        Button(PILImage.open('assets/settings_button.png'),
+        Button('settings',
                app.width//2+95,app.height//2+15,.3),
     ]
     app.start_buttons[0].AddListener(lambda : setActiveScreen('levelSelect'))
     app.start_buttons[1].AddListener(lambda : setActiveScreen('help'))
+    app.start_buttons[2].AddListener(lambda : setActiveScreen('settings'))
+    
 
 def start_redrawAll(app):
     drawLabel('Sudoku',app.width//2,app.height//2-100,
-              size=60,align='center')
+              size=60,align='center',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
     for button in app.start_buttons:
         button.drawButton()
 
+def start_onMouseMove(app,mouseX,mouseY):
+    for button in app.start_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
+
+def start_onMousePress(app,mouseX,mouseY):
+    for button in app.start_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
+
 def start_onMouseRelease(app,mouseX,mouseY):
     for button in app.start_buttons:
+        if button.contains(mouseX,mouseY): button.onClicked()
+
+
+##################################
+#2 Settings Screen
+##################################
+
+def settings_onScreenStart(app):
+    app.colorSchemes = [
+        [(250, 243, 221),(200, 213, 185),(143, 192, 169),(104, 176, 171),(105, 109, 125),(254, 181,  92),(219, 178, 230),],
+        [(235, 252, 250),(206, 223, 217),(176, 147, 152),(155, 106, 108),( 95,  84,  73),(199,  68,  51),(238, 229, 161),],
+        [(245, 245, 245),(220, 220, 220),(204, 202, 152),(220, 150,  90),( 36,  35,  37),(225, 109,  85),(188, 223, 225),],
+        [(204, 204, 204),(153, 153, 153),(102, 102, 102),( 51,  51,  51),(  0,   0,   0),(255, 192, 203),(230, 230, 250),],
+    ]
+    app.settings_buttons = [
+        Button('rightarrow',app.width//2-180,app.height//2-100,.3),
+        Button('rightarrow',app.width//2-180,app.height//2-20,.3),
+        Button('rightarrow',app.width//2-180,app.height//2+60,.3),
+        Button('rightarrow',app.width//2-180,app.height//2+140,.3),
+        Button('back',app.width-35,37,0.25),
+    ]
+    app.settings_buttons[-1].AddListener(lambda : setActiveScreen('start'))
+    for i in range(4):
+        app.settings_buttons[i].AddListener(changeColor(app,i))
+
+def changeColor(app,index):
+    def listtodict(list):
+        result = dict()
+        result['lightest'] = list[0]
+        result['mediumlight'] = list[1]
+        result['medium'] = list[2]
+        result['mediumdark'] = list[3]
+        result['darkest'] = list[4]
+        result['wrong'] = list[5]
+        result['hint'] = list[6]
+        return result
+    def f():
+      UI.colors = listtodict(app.colorSchemes[index])
+      UI.onColorChanged()
+    return f
+
+def settings_redrawAll(app):
+    drawLabel('Color Scheme',20,25,size=35,align='top-left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+
+    dy = 80
+    dx = 45
+    for i in range(4):
+        y = app.height//2-100+i*dy
+        for j in range(7):
+            x = app.width//2-100+j*dx
+            drawRect(x,y,dx,40,align='center',fill=rgb(*app.colorSchemes[i][j]))
+
+    for button in app.settings_buttons:
+        button.drawButton()
+
+def settings_onMouseMove(app,mouseX,mouseY):
+    for button in app.settings_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
+
+def settings_onMousePress(app,mouseX,mouseY):
+    for button in app.settings_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
+
+def settings_onMouseRelease(app,mouseX,mouseY):
+    for button in app.settings_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
 
@@ -45,19 +124,35 @@ def start_onMouseRelease(app,mouseX,mouseY):
 
 def help_onScreenStart(app):
     app.help_buttons = [
-        Button(PILImage.open('assets/back_button.png'),
+        Button('back',
         app.width-35,37,0.25),
     ]
     app.help_buttons[-1].AddListener(lambda : setActiveScreen('start'))
 
 def help_redrawAll(app):
-    drawLabel('wasd or shift-wasd to move',20,50,size=20,align='left')
-    drawLabel('press n to autoplay singletons',20,100,size=20,align='left')
-    drawLabel('in medium or higher difficulty',20,140,size=20,align='left')
-    drawLabel('numbers keys to enter values',20,190,size=20,align='left')
-    drawLabel('shift-number keys to enter legals',20,240,size=20,align='left')
+    drawLabel('wasd or shift-wasd to move',20,50,size=20,align='left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel('numbers keys to enter values',20,100,size=20,align='left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel('shift-number keys to enter legals',20,150,size=20,align='left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel('press h for hint',20,200,size=20,align='left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel('in medium or higher difficulty,',20,250,size=20,align='left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel('press n to autoplay singletons',20,290,size=20,align='left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
     for button in app.help_buttons:
         button.drawButton()
+
+def help_onMouseMove(app,mouseX,mouseY):
+    for button in app.help_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
+
+def help_onMousePress(app,mouseX,mouseY):
+    for button in app.help_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
 
 def help_onMouseRelease(app,mouseX,mouseY):
     for button in app.help_buttons:
@@ -72,13 +167,13 @@ def help_onMouseRelease(app,mouseX,mouseY):
 def levelSelect_onScreenStart(app):
     app.level = 0
     app.levelSelect_buttons = [
-        Button(PILImage.open('assets/arrow_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
+        Button('leftarrow',
                app.width//2-135,app.height//2-50,.3),
-        Button(PILImage.open('assets/arrow_button.png'),
+        Button('rightarrow',
                app.width//2+135,app.height//2-50,.3),
-        Button(PILImage.open('assets/play_button.png'),
+        Button('play',
                app.width//2,app.height//2+100,.6),
-        Button(PILImage.open('assets/back_button.png'),
+        Button('back',
             app.width-35,37,0.25),
     ]
     app.levelSelect_buttons[0].AddListener(changeLevel(app,-1))
@@ -97,7 +192,8 @@ def startLevel(app):
         app.message = None
         app.notetakingMode = False #temp til right click is a thing
         if app.level == 5:
-            app.board = Board(app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
+            app.manualState = State(5,manualBoard=[[0 for _ in range(9)] for _ in range(9)])
+            app.board = Board(app.manualState,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('manualSelect')
         else:
             app.state = State(app.level)
@@ -114,10 +210,21 @@ def levelSelect_redrawAll(app):
         elif i == 4: return 'Evil'
         elif i == 5: return 'Manual'
     
-    drawLabel('Select Difficulty',20,20,size=50,align='top-left')
-    drawLabel(getString(app.level),app.width//2,app.height//2-50,size=50)
+    drawLabel('Select Difficulty',20,25,size=35,align='top-left',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel(getString(app.level),app.width//2,app.height//2-50,size=40,font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
     for button in app.levelSelect_buttons:
         button.drawButton()
+
+def levelSelect_onMouseMove(app,mouseX,mouseY):
+    for button in app.levelSelect_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
+
+def levelSelect_onMousePress(app,mouseX,mouseY):
+    for button in app.levelSelect_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
 
 def levelSelect_onMouseRelease(app,mouseX,mouseY):
     for button in app.levelSelect_buttons:
@@ -131,11 +238,11 @@ def levelSelect_onMouseRelease(app,mouseX,mouseY):
 
 def manualSelect_onScreenStart(app):
     app.manualSelect_buttons = [
-        Button(PILImage.open('assets/arrow_button.png'),
+        Button('rightarrow',
                app.width//2+135,app.height//2-50,.3),
-        Button(PILImage.open('assets/arrow_button.png'),
+        Button('rightarrow',
                app.width//2+135,app.height//2+50,.3),
-        Button(PILImage.open('assets/back_button.png'),
+        Button('back',
         app.width-35,37,0.25),
     ]
     app.manualSelect_buttons[0].AddListener(getBoardFromInput(app))
@@ -167,10 +274,21 @@ def getBoardFromInput(app):
     return f
 
 def manualSelect_redrawAll(app):
-    drawLabel('Enter by text',app.width//2+75,app.height//2-50,size=35,align='right')
-    drawLabel('Enter graphically',app.width//2+75,app.height//2+50,size=35,align='right')
+    drawLabel('Enter by text',app.width//2+75,app.height//2-50,size=25,align='right',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
+    drawLabel('Enter graphically',app.width//2+75,app.height//2+50,size=25,align='right',font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
     for button in app.manualSelect_buttons:
         button.drawButton()
+
+def manualSelect_onMouseMove(app,mouseX,mouseY):
+    for button in app.manualSelect_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
+
+def manualSelect_onMouseMove_onMousePress(app,mouseX,mouseY):
+    for button in app.manualSelect_onMouseMove_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
 
 def manualSelect_onMouseRelease(app,mouseX,mouseY):
     for button in app.manualSelect_buttons:
@@ -184,9 +302,9 @@ def manualSelect_onMouseRelease(app,mouseX,mouseY):
 
 def manual_onScreenStart(app):
     app.manual_buttons = [
-        Button(PILImage.open('assets/play_button.png'),
+        Button('play',
             app.width+20,app.height-100,.6),
-        Button(PILImage.open('assets/back_button.png'),
+        Button('back',
         app.width-35,37,0.25),
     ]
     app.manual_buttons[0].AddListener(makeLevel(app))
@@ -216,6 +334,9 @@ def manual_onMousePress(app, mouseX, mouseY):
         row,col = app.state.selection[0],app.state.selection[1]
         app.board.entries[row][col] = app.board.numPadSelection
 
+    for button in app.manual_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
+
 def manual_onMouseMove(app, mouseX, mouseY):
     selectedCell = app.board.getCell(mouseX, mouseY)
     if (app.state.selection != None and 
@@ -225,6 +346,10 @@ def manual_onMouseMove(app, mouseX, mouseY):
             app.board.numPadSelection = selectedNumPadButton
     else:
         app.board.numPadSelection = None
+    
+    for button in app.manual_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
 
 def manual_onMouseRelease(app,mouseX,mouseY):
     for button in app.manual_buttons:
@@ -239,21 +364,21 @@ def manual_onMouseRelease(app,mouseX,mouseY):
 def level_onScreenStart(app):
     y = 48
     app.level_buttons = [
-        Button(PILImage.open('assets/home_button.png'),
+        Button('home',
                app.width-35,y,0.6),
-        Button(PILImage.open('assets/help_button_small.png'),
-               app.width-35,y+60,0.6),
-        Button(PILImage.open('assets/hint_button.png'),
+        # Button('helpsmall',
+        #        app.width-35,y+60,0.6),
+        Button('hint',
                app.width-35,y+120,0.6),
-        Button(PILImage.open('assets/undo_button.png'),
+        Button('undo',
                app.width-35,y+180,0.6),
-        Button(PILImage.open('assets/undo_button.png').transpose(PILImage.FLIP_LEFT_RIGHT),
+        Button('redo',
                app.width-35,y+240,0.6),
-        Button(PILImage.open('assets/notes_button.png'),
+        Button('notes',
                app.width-35,y+300,0.6),
     ]
     app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
-    app.level_buttons[2].AddListener(getHint(app))
+    app.level_buttons[1].AddListener(getHint(app))
     app.level_buttons[-3].AddListener(undo(app))
     app.level_buttons[-2].AddListener(redo(app))
     app.level_buttons[-1].AddListener(toggleAutoLegals(app))
@@ -291,7 +416,8 @@ def toggleAutoLegals(app):
 
 def level_redrawAll(app):
     if app.message != None:
-        drawLabel(app.message,app.width//2,400,size=20)
+        drawLabel(app.message,app.width//2,400,size=20,font='monospace',bold=True,
+              fill=rgb(*UI.colors['darkest']))
     app.board.drawBoard()
     for button in app.level_buttons:
         button.drawButton()
@@ -316,6 +442,8 @@ def level_onMousePress(app, mouseX, mouseY):
         if (app.width-50 < mouseX < app.width and app.height-50 < mouseY < app.height):
             app.notetakingMode = not app.notetakingMode
             #temp measure until right click is supported
+    for button in app.level_buttons:
+        if button.contains(mouseX,mouseY): button.onStartClick()
 
 def level_onMouseMove(app, mouseX, mouseY):
     if not app.state.gameOver:
@@ -328,6 +456,10 @@ def level_onMouseMove(app, mouseX, mouseY):
                 app.board.numPadSelection = selectedNumPadButton
         else:
             app.board.numPadSelection = None
+    
+    for button in app.level_buttons:
+        if button.contains(mouseX,mouseY): button.onHover()
+        else: button.image = button.ownImages[0]
 
 def level_onMouseRelease(app,mouseX,mouseY):
     for button in app.level_buttons:
