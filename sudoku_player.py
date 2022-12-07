@@ -192,10 +192,15 @@ def startLevel(app):
         app.message = None
         app.notetakingMode = False #temp til right click is a thing
         if app.level == 5:
+            app.level_buttons[-1].setOff()
             app.state = State(5,manualBoard=[[0 for _ in range(9)] for _ in range(9)])
             app.board = Board(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('manualSelect')
         else:
+            if app.level == 0:
+                app.level_buttons[-1].setOff()
+            else:
+                app.level_buttons[-1].setOn()
             app.state = State(app.level)
             app.board = SudokuBoard(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('level')
@@ -287,8 +292,8 @@ def manualSelect_onMouseMove(app,mouseX,mouseY):
         if button.contains(mouseX,mouseY): button.onHover()
         else: button.image = button.ownImages[0]
 
-def manualSelect_onMouseMove_onMousePress(app,mouseX,mouseY):
-    for button in app.manualSelect_onMouseMove_buttons:
+def manualSelect_onMousePress(app,mouseX,mouseY):
+    for button in app.manualSelect_buttons:
         if button.contains(mouseX,mouseY): button.onStartClick()
 
 def manualSelect_onMouseRelease(app,mouseX,mouseY):
@@ -402,7 +407,7 @@ def level_onScreenStart(app):
                app.width-35,y+180,0.6),
         Button('redo',
                app.width-35,y+240,0.6),
-        Button('notes',
+        Toggle('notes',
                app.width-35,y+300,0.6),
     ]
     app.level_buttons[0].AddListener(lambda : setActiveScreen('start'))
@@ -438,6 +443,7 @@ def toggleAutoLegals(app):
     def f():
         app.state.updateUndoRedoLists()
         app.state.isLegalsAuto = not app.state.isLegalsAuto
+        app.level_buttons[-1].toggle()
         if app.state.isLegalsAuto: app.state.updateAllLegals()
     return f
     
@@ -471,7 +477,8 @@ def level_onMousePress(app, mouseX, mouseY):
             app.notetakingMode = not app.notetakingMode
             #temp measure until right click is supported
     for button in app.level_buttons:
-        if button.contains(mouseX,mouseY): button.onStartClick()
+        if button.contains(mouseX,mouseY):
+            button.onStartClick()
 
 def level_onMouseMove(app, mouseX, mouseY):
     if not app.state.gameOver:
@@ -490,6 +497,15 @@ def level_onMouseMove(app, mouseX, mouseY):
         else: button.image = button.ownImages[0]
 
 def level_onMouseRelease(app,mouseX,mouseY):
+    if not app.state.gameOver:
+        selectedCell = app.board.getCell(mouseX, mouseY)
+        if (app.state.selection != None and 
+                selectedCell == app.state.selection and
+                not app.state.isEntryFixed(*app.state.selection)):
+                selectedNumPadButton = app.board.getNumPadButton(mouseX, mouseY)
+                if selectedNumPadButton != None:
+                    app.board.numPadSelection = selectedNumPadButton
+    
     for button in app.level_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 

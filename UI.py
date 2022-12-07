@@ -19,6 +19,9 @@ class Event(object): # taken from https://www.geeksforgeeks.org/mimicking-events
     def __call__(self, *args, **keywargs):
         for eventhandler in self.__eventhandlers:
             eventhandler(*args, **keywargs)
+    
+    def clear(self):
+        self.__eventhandlers = []
 
 class UI:
     colors = {  'darkest':(105, 109, 125),
@@ -85,11 +88,12 @@ class Button:
     def updateImages():
         for key in Button.sourceImages:
             Button.images[key] = [Button.makeColorCMUImage(Button.sourceImages[key]),
-                                  Button.makeColorCMUImage(Button.sourceImages[key],offset=(20,20,20)),
-                                  Button.makeColorCMUImage(Button.sourceImages[key],offset=(40,40,40)),]
+                                  Button.makeColorCMUImage(Button.sourceImages[key],offset=(30,30,30)),
+                                  Button.makeColorCMUImage(Button.sourceImages[key],offset=(60,60,60)),]
 
     def __init__(self,imageName,cx,cy,scale=1):
         if Button.images == dict(): Button.updateImages()
+        self.imageName = imageName
         self.ownImages = Button.images[imageName]
         self.image = self.ownImages[0]
         UI.onColorChanged += lambda:self.getImages(imageName)
@@ -103,6 +107,10 @@ class Button:
         self.onClicked += self.changeImage(0)
         self.onHover += self.changeImage(1)
         self.onStartClick += self.changeImage(2)
+
+    def __eq__(self,other):
+        return (isinstance(other,Button) and
+                self.imageName == other.imageName)
 
     def getImages(self,imageName):
         self.ownImages = Button.images[imageName]
@@ -126,6 +134,33 @@ class Button:
     def contains(self,x,y):
         return (self.cx-0.5*self.width < x < self.cx+0.5*self.width and
                 self.cy-0.5*self.height < y < self.cy+0.5*self.height)
+
+class Toggle(Button):
+    def __init__(self,imageName,cx,cy,scale=1):
+        super().__init__(imageName,cx,cy,scale=scale)
+        self.initialImages = copy.deepcopy(self.ownImages)
+        self.isOn = True
+    
+    def changeImage(self,index):
+        def f():
+            self.image = self.ownImages[index]
+        return f
+
+    def setOn(self):
+        self.isOn = True
+        self.ownImages[0],self.ownImages[-1]=self.initialImages[0],self.initialImages[-1]
+        self.image = self.ownImages[0]
+    
+    def setOff(self):
+        self.isOn = False
+        self.ownImages[-1],self.ownImages[0]=self.initialImages[0],self.initialImages[-1]
+        self.image = self.ownImages[0]
+    
+    def toggle(self):
+        if self.isOn:
+            self.setOff()
+        else:
+            self.setOn()
 
 class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
              #         and https://cs3-112-f22.academy.cs.cmu.edu/notes/4189
@@ -270,9 +305,9 @@ class SudokuBoard(Board):
             x = cellLeft + self.cellBorderWidth + (i%3)*cellWidth
             y = cellTop + self.cellBorderWidth + (i//3)*cellHeight
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
-            if i+1 in self.state.legals[row][col]:
-                drawLabel(i+1, cx, cy,
-                            fill=rgb(*UI.colors['mediumdark']), align='center',font='monospace',bold=True)
-            elif (row,col) == self.state.selection and i+1 == self.numPadSelection:
+            if (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
                           fill=rgb(*UI.colors['mediumlight']), align='center',font='monospace',bold=True)
+            elif i+1 in self.state.legals[row][col]:
+                drawLabel(i+1, cx, cy,
+                            fill=rgb(*UI.colors['mediumdark']), align='center',font='monospace',bold=True)
