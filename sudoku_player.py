@@ -192,8 +192,8 @@ def startLevel(app):
         app.message = None
         app.notetakingMode = False #temp til right click is a thing
         if app.level == 5:
-            app.manualState = State(5,manualBoard=[[0 for _ in range(9)] for _ in range(9)])
-            app.board = Board(app.manualState,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
+            app.state = State(5,manualBoard=[[0 for _ in range(9)] for _ in range(9)])
+            app.board = Board(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('manualSelect')
         else:
             app.state = State(app.level)
@@ -267,8 +267,9 @@ def getBoardFromInput(app):
                 i += 1
             elif input == 'q': break
         if i == 9:
-            app.state = State.tryCreateState(entries)
-            if app.state != None:
+            newState = State.tryCreateState(entries)
+            if newState != None:
+                app.state = newState
                 app.board = SudokuBoard(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
                 setActiveScreen('level')
     return f
@@ -303,7 +304,7 @@ def manualSelect_onMouseRelease(app,mouseX,mouseY):
 def manual_onScreenStart(app):
     app.manual_buttons = [
         Button('play',
-            app.width+20,app.height-100,.6),
+            app.width-40,app.height-35,.25),
         Button('back',
         app.width-35,37,0.25),
     ]
@@ -312,11 +313,13 @@ def manual_onScreenStart(app):
 
 def makeLevel(app):
     def f():
-        app.state = State.tryCreateState(app.board.entries)
-        if app.state != None:
+        newState = State.tryCreateState(app.board.entries)
+        if newState != None:
+            app.state = newState
             app.board = SudokuBoard(app.state,app.boardLeft,app.boardTop,app.boardWidth,app.boardHeight)
             setActiveScreen('level')
         else:
+            
             app.board.entries = [[0 for _ in range(app.board.cols)] for _ in range(app.board.rows)]
     return f
 
@@ -355,6 +358,31 @@ def manual_onMouseRelease(app,mouseX,mouseY):
     for button in app.manual_buttons:
         if button.contains(mouseX,mouseY): button.onClicked()
 
+def manual_onKeyPress(app, key):
+    if key in {'0','1','2','3','4','5','6','7','8','9'}:
+        if (app.state.selection != None):
+            row,col = app.state.selection[0],app.state.selection[1]
+            app.board.entries[row][col] = int(key)
+    
+    #move to next non-empty cell
+    elif key == 'w': #up
+        moveSelection(app,-1,0,'mode1')
+    elif key == 's': #down
+        moveSelection(app,1,0,'mode1')
+    elif key == 'a': #left
+        moveSelection(app,0,-1,'mode1')
+    elif key == 'd': #right
+        moveSelection(app,0,1,'mode1')
+
+    #move to next cell
+    elif key == 'W': #shift-up
+        moveSelection(app,-1,0,'mode2')
+    elif key == 'S': #shift-down
+        moveSelection(app,1,0,'mode2')
+    elif key == 'A': #shift-left
+        moveSelection(app,0,-1,'mode2')
+    elif key == 'D': #shift-right
+        moveSelection(app,0,1,'mode2')
 
 ##################################
 #6 Level Screen

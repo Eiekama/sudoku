@@ -161,7 +161,7 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
         if self.entries[row][col] != 0:
             cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
             drawLabel(self.entries[row][col], cx, cy,
-                      size=25, fill=rgb(*UI.colors[labelColor]))
+                      size=25, fill=rgb(*UI.colors[labelColor]),font='monospace',bold=True)
         
         #draws numpad
         cellWidth = (cellWidth-2*self.cellBorderWidth)/3
@@ -172,7 +172,7 @@ class Board: #adapted from https://cs3-112-f22.academy.cs.cmu.edu/notes/4187
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
             if (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
-                            fill=rgb(*UI.colors['mediumlight']), align='center')
+                            fill=rgb(*UI.colors['mediumlight']), align='center',font='monospace',bold=True)
 
     def getNumPadButton(self,x,y):
         cellLeft, cellTop = self.getCellLeftTop(*self.state.selection)
@@ -261,7 +261,7 @@ class SudokuBoard(Board):
         if self.state.entries[row][col] != 0:
             cx, cy = cellLeft+0.5*cellWidth, cellTop+0.5*cellHeight
             drawLabel(self.state.entries[row][col], cx, cy,
-                      size=25, fill=rgb(*UI.colors[labelColor]))
+                      size=25, fill=rgb(*UI.colors[labelColor]),font='monospace',bold=True)
         
         #draws legals (and numpad for medium cell)
         cellWidth = (cellWidth-2*self.cellBorderWidth)/3
@@ -272,7 +272,7 @@ class SudokuBoard(Board):
             cx, cy = x + 0.5*cellWidth, y+0.5*cellHeight
             if i+1 in self.state.legals[row][col]:
                 drawLabel(i+1, cx, cy,
-                            fill=rgb(*UI.colors['mediumdark']), align='center')
+                            fill=rgb(*UI.colors['mediumdark']), align='center',font='monospace',bold=True)
             elif (row,col) == self.state.selection and i+1 == self.numPadSelection:
                 drawLabel(i+1, cx, cy,
-                          fill=rgb(*UI.colors['mediumlight']), align='center')
+                          fill=rgb(*UI.colors['mediumlight']), align='center',font='monospace',bold=True)

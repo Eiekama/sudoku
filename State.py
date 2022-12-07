@@ -83,26 +83,14 @@ class State:
             return f.read()
     
     def getBoard(self):
-        contents = '''\
-0 4 2 0 0 6 0 0 3
-0 0 0 0 0 2 0 0 0
-0 0 0 0 8 0 0 2 6
-0 7 0 2 0 0 0 8 0
-0 0 5 9 7 0 1 0 2
-3 2 0 6 0 8 4 0 0
-0 0 8 5 0 0 0 0 0
-0 0 4 8 0 1 0 0 0
-2 3 6 0 0 0 0 0 0'''
-        board = [[int(v) for v in line.split(' ')] for line in contents.splitlines()]
-        return board
-        # if self.type == 5:
-        #     assert(self.manualBoard != None)
-        #     return self.manualBoard
-        # else:
-        #     filePath = random.choice(State.builtinBoards[self.type])
-        #     fileContents = State.readFile(filePath)
-        #     board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
-        #     return board
+        if self.type == 5:
+            assert(self.manualBoard != None)
+            return self.manualBoard
+        else:
+            filePath = random.choice(State.builtinBoards[self.type])
+            fileContents = State.readFile(filePath)
+            board = [[int(v) for v in line.split(' ')] for line in fileContents.splitlines()]
+            return board
 
     ##################################
     # Undo/Redo
